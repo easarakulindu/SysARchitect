@@ -194,5 +194,30 @@ namespace SysARchitect.Tests
             Assert.That(cached.Failed, Is.Zero); Assert.That(cached.FindNode("cache").Cache.Hits, Is.GreaterThan(0));
             Assert.That(cached.FindNode("db").Database.Reads, Is.LessThan(without.FindNode("db").Database.Reads * .9));
         }
+
+        [Test]
+        public void LiveDatabaseReconfigurationReservesTheCorrectNewMember()
+        {
+            var engine = new SimulationEngine { RequestsPerSecond = 0 };
+            var node = Node(engine, "db", NodeType.Database, 100); node.LatencyMs = 500;
+            node.Database.Configure(DatabaseMode.Replication, 1);
+            engine.SubmitDatabaseRequest("db", true, 4); Tick(engine, 1);
+            node.Database.Configure(DatabaseMode.Sharding, 3); Drain(engine);
+            Assert.That(engine.Succeeded, Is.EqualTo(1)); Assert.That(engine.Failed, Is.Zero);
+            Assert.That(node.Database.Members[1].Records.ContainsKey(4), Is.True);
+            Assert.That(node.Database.Members[0].Records.ContainsKey(4), Is.False);
+        }
+
+        [Test]
+        public void DatabaseExecutionCannotForceWritesToReplicasOrTheWrongShard()
+        {
+            var model = new DatabaseModel(); model.Configure(DatabaseMode.Replication, 2);
+            Assert.That(model.Execute(true, 1, out string error, 1), Is.False);
+            Assert.That(error, Does.Contain("routing policy"));
+            Assert.That(model.LogicalRecordCount, Is.Zero);
+            model.Configure(DatabaseMode.Sharding, 3);
+            Assert.That(model.Execute(true, 4, out _, 0), Is.False);
+            Assert.That(model.Execute(true, 4, out _, 1), Is.True);
+        }
     }
 }

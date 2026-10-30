@@ -157,6 +157,15 @@ namespace SysARchitect.Simulation
             LastOperationSucceeded = false;
             int index = routedMember ?? SelectMember(write, key);
             LastMemberIndex = index;
+            if (index >= 0 && index < members.Count &&
+                ((write && Mode == DatabaseMode.Replication && index != 0) ||
+                (Mode == DatabaseMode.Sharding && index != ShardFor(key, members.Count))))
+            {
+                FailedOperations++; members[index].Failed++;
+                error = "Member selection violates primary-write or shard-key routing policy";
+                LastOperation = error;
+                return false;
+            }
             if (index < 0 || index >= members.Count || members[index].Status != NodeStatus.Healthy)
             {
                 FailedOperations++;

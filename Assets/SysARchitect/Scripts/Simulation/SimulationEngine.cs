@@ -54,6 +54,7 @@ namespace SysARchitect.Simulation
         internal int RecordKey;
         internal double CreatedAt, ArrivedAt, ReadyAt, Deadline;
         internal int Hops, DatabaseMember = -1;
+        internal DatabaseMember MemberReservation;
         internal string CacheOwner, CacheId, DatabaseId, StorageRoute;
         internal bool PopulateCache;
         internal long ReadVersion;
@@ -224,6 +225,7 @@ namespace SysARchitect.Simulation
                         }
                         if (!node.Database.TryStart(member)) { node.Waiting.Enqueue(request); continue; }
                         request.DatabaseMember = member;
+                        request.MemberReservation = node.Database.Members[member];
                         StartProcessing(node, request);
                     }
                     continue;
@@ -329,6 +331,15 @@ namespace SysARchitect.Simulation
             if (source.Cache != null) { RouteCache(source, request); return; }
             if (source.Database != null)
             {
+                if (request.DatabaseMember < 0 || request.DatabaseMember >= source.Database.Members.Count ||
+                    !ReferenceEquals(request.MemberReservation, source.Database.Members[request.DatabaseMember]))
+                {
+                    // Resharding/reconfiguration replaced the reserved service member.
+                    // Charge service against the new destination instead of writing to an old index.
+                    if (source.Waiting.Count >= source.QueueCapacity) Fail(source, request, false, "Queue full after database reconfiguration");
+                    else source.Waiting.Enqueue(request);
+                    return;
+                }
                 if (!source.Database.Execute(request.IsWrite, request.RecordKey, out string error, request.DatabaseMember))
                 { Fail(source, request, false, error); return; }
                 if (request.IsWrite)
@@ -447,6 +458,7 @@ namespace SysARchitect.Simulation
             if (!validation.isValid) { Fail(source, request, false, validation.errorMessage); return; }
             request.Path = path;
             request.DatabaseMember = -1;
+            request.MemberReservation = null;
             transfers.Add((source, target, request));
         }
 
