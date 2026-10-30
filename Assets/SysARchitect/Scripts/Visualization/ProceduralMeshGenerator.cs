@@ -393,8 +393,8 @@ namespace SysARchitect.Visualization
                 for (int i = 0; i < sides; i++)
                 {
                     tris[ti++] = centreIndex;
-                    tris[ti++] = firstRim + i;
                     tris[ti++] = firstRim + (i + 1) % sides;
+                    tris[ti++] = firstRim + i;
                 }
             }
 
@@ -420,8 +420,8 @@ namespace SysARchitect.Visualization
                 for (int i = 0; i < sides; i++)
                 {
                     tris[ti++] = centreIndex;
-                    tris[ti++] = firstRim + (i + 1) % sides;
                     tris[ti++] = firstRim + i;
+                    tris[ti++] = firstRim + (i + 1) % sides;
                 }
             }
 
