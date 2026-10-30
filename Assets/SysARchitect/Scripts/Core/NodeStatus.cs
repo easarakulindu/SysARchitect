@@ -18,6 +18,9 @@ namespace SysARchitect.Core
         Crashed,
 
         /// <summary>Node is offline or not yet started.</summary>
-        Offline
+        Offline,
+
+        /// <summary>A restart is in progress; traffic is temporarily unavailable.</summary>
+        Recovering
     }
 }

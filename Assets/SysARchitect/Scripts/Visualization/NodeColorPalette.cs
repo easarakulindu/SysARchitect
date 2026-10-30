@@ -88,6 +88,7 @@ namespace SysARchitect.Visualization
                 case NodeStatus.Overloaded: return Overloaded;
                 case NodeStatus.Crashed:    return Crashed;
                 case NodeStatus.Offline:    return Offline;
+                case NodeStatus.Recovering: return new Color(.5f, .55f, 1f);
                 default:                    return Color.white;
             }
         }

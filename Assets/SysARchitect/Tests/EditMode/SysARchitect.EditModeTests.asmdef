@@ -1,0 +1,6 @@
+{
+    "name": "SysARchitect.EditModeTests",
+    "references": ["SysARchitect.Runtime"],
+    "includePlatforms": ["Editor"],
+    "optionalUnityReferences": ["TestAssemblies"]
+}

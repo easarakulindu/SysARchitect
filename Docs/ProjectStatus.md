@@ -59,3 +59,19 @@ Headless tests do not establish visual quality or real mouse usability.
 6. Visual/mobile polish, performance measurements and full demo validation: pending.
 
 `.agents/` is ignored and must never be staged. All commits are local; never push.
+
+## Deterministic simulation core
+
+`SimulationEngine` uses explicit 50 ms steps and plain C# state. It models bounded FIFO
+queues, rate-limited parallel service, end-to-end deadlines, round-robin routing,
+load-balancer health filtering, memory exhaustion, injected failure and a one-second
+restart state. CPU saturation alone never crashes a node. The default educational
+memory model is 32 MB baseline plus 1 MB per queued/processing request. Terminal service
+nodes succeed; frontends, load balancers and worker nodes require an outgoing route.
+Multiple outgoing service edges choose one target by round-robin (not a fan-out transaction).
+
+The same topology, configuration and tick sequence reproduce results within the same
+runtime. No cross-platform floating-point identity is claimed. Packet animation is a
+presentation of transfers and does not drive processing. 16 Edit Mode test cases passed,
+including request conservation against actual queue/processing counts on every tick.
+Scene simulation controls and presentation are the next integration step.
