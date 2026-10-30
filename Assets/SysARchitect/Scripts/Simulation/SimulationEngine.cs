@@ -99,6 +99,7 @@ namespace SysARchitect.Simulation
         public void AddNode(SimulationNode node)
         {
             if (node == null || byId.ContainsKey(node.Id)) throw new ArgumentException("Node must have a unique id.");
+            node.Database?.AdvanceTo(Time);
             byId.Add(node.Id, node);
             nodes.Add(node);
         }

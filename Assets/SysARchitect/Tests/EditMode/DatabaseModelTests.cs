@@ -170,6 +170,22 @@ namespace SysARchitect.Tests
         }
 
         [Test]
+        public void DatabaseAddedAfterSimulationStartsUsesTheCurrentClockForRecovery()
+        {
+            var engine = new SimulationEngine { RequestsPerSecond = 0 };
+            for (int i = 0; i < 200; i++) engine.Step();
+            var node = new SimulationNode("late-db", NodeType.Database);
+            engine.AddNode(node);
+            Assert.That(node.Database.Clock, Is.EqualTo(engine.Time));
+            node.Database.FailMember(0);
+            node.Database.RecoverMember(0);
+            for (int i = 0; i < 10; i++) engine.Step();
+            Assert.That(node.Database.Members[0].Status, Is.EqualTo(NodeStatus.Recovering));
+            for (int i = 0; i < 11; i++) engine.Step();
+            Assert.That(node.Database.Members[0].Status, Is.EqualTo(NodeStatus.Healthy));
+        }
+
+        [Test]
         public void DatabaseClockCannotMoveBackwards()
         {
             var model = new DatabaseModel();
