@@ -119,3 +119,38 @@ database replication/sharding against this same engine. Follow with the five gui
 lessons, Docker/Kubernetes behavior, quiz/progress, shared AR placement and Android
 validation. The complete product is not finished; no physical AR, Android build, or
 mobile performance verification has been claimed.
+
+## Build verification and local commits
+
+Unity 6000.6.5f1 successfully built the Linux desktop demo (108,617,475 bytes reported;
+about 104 MiB on disk). A 12-second graphical player startup smoke test completed with
+no application exceptions. The test runner intentionally terminated that instance after
+12 seconds (`timeout` exit 124). The initial build tried to start template XR Simulation
+and logged a missing camera-background shader error. The desktop build helper now
+turns off automatic XR initialization during the build and restores the editor setting
+in `finally`; the rebuilt player's log has no camera-background error. Original XR
+settings and the AR background renderer feature remain intact.
+
+Remaining startup warnings: the desktop display cannot report DPI; stripped/unused URP
+postprocessing shaders report that those passes will not execute. The desktop camera
+uses no postprocessing. These warnings, manual input QA, and device AR remain unverified
+work rather than claimed fixes. Player/build logs are `/tmp/sysarchitect-linux-player.log`
+and `/tmp/sysarchitect-linux-build.log`.
+
+Local implementation commits:
+
+- `b155a09` — ignore `.agents`.
+- `be6c71d` — preserve/repair the inherited 21-script builder foundation.
+- `0c46547` — wire desktop builder scene and lifecycle tests.
+- `36ab056` — deterministic request/resource engine and tests.
+- `b185970` — distinguish fresh arrivals from sustained overload.
+- `c6d712e` — repair inherited cylinder-cap winding.
+- `89ecb4b` — connect simulation controls, live inspector and visual presentation.
+- The following build-helper commit contains the desktop-only build entry point and this
+  validation record; use `git log` for its hash.
+
+No pushes were made. Validation-generated edits to the original sample material and
+URP/volume assets were reversed to their recorded clean baseline, with a review patch
+retained at `/tmp/sysarchitect-generated-asset-changes.patch`. The untracked
+`dotnet-tools.json` appeared during the session; its origin is not established, so it was
+left untouched and excluded from commits. `.agents` is ignored and has no tracked files.
