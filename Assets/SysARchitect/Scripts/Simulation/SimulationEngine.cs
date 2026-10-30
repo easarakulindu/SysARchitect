@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using SysARchitect.Core;
+using SysARchitect.Graph;
 
 namespace SysARchitect.Simulation
 {
@@ -10,6 +11,8 @@ namespace SysARchitect.Simulation
         public string Id { get; }
         public NodeType Type { get; }
         public double Capacity = 100;
+        public LoadBalancerRole RoutingRole;
+        public long CacheBypasses { get; internal set; }
         public int QueueCapacity = 50;
         public double MemoryLimitMB = 512;
         public double LatencyMs = 10;
@@ -27,6 +30,7 @@ namespace SysARchitect.Simulation
         public double AverageLatencyMs => Completed == 0 ? 0 : TotalLatencyMs / Completed;
         public string FailureReason { get; internal set; }
         public DatabaseModel Database { get; }
+        public CacheModel Cache { get; }
         internal double TotalLatencyMs, Credit, RecoveryAt;
         internal int RouteIndex, Arrivals, Processed, RejectedThisTick;
         internal readonly Queue<SimRequest> Waiting = new Queue<SimRequest>();
@@ -39,6 +43,7 @@ namespace SysARchitect.Simulation
             Id = id;
             Type = type;
             if (type == NodeType.Database) Database = new DatabaseModel();
+            if (type == NodeType.Cache) Cache = new CacheModel();
         }
     }
 
@@ -48,7 +53,12 @@ namespace SysARchitect.Simulation
         internal bool IsWrite;
         internal int RecordKey;
         internal double CreatedAt, ArrivedAt, ReadyAt, Deadline;
-        internal int Hops;
+        internal int Hops, DatabaseMember = -1;
+        internal string CacheOwner, CacheId, DatabaseId, StorageRoute;
+        internal bool PopulateCache;
+        internal long ReadVersion;
+        internal RequestPathKind Path;
+        internal bool CacheLookup;
     }
 
     /// <summary>
@@ -78,6 +88,8 @@ namespace SysARchitect.Simulation
         public double AverageLatencyMs => Succeeded == 0 ? 0 : totalLatencyMs / Succeeded;
         private double totalLatencyMs;
         public event Action<long, string, string> OnTransfer;
+        public event Action<long, string, string, RequestPathKind> OnTransferPath;
+        public event Action<long, string, string, bool> OnCacheAccess;
         public event Action<long, string, bool> OnRequestFinished;
         public string LastFailureReason { get; private set; }
         public string LastFailureNodeId { get; private set; }
@@ -89,6 +101,17 @@ namespace SysARchitect.Simulation
         {
             var node = FindNode(id);
             if (node?.Database == null) throw new ArgumentException("Choose a Database node.");
+            ValidateConfig(node);
+            Generated++;
+            Arrive(node, new SimRequest { Id = Generated, IsWrite = write, RecordKey = key,
+                CreatedAt = Time, Deadline = Time + node.TimeoutMs / 1000 });
+            return Generated;
+        }
+
+        public long SubmitRequest(string frontend, bool write, int key)
+        {
+            var node = FindNode(frontend);
+            if (node == null || node.Type != NodeType.Frontend) throw new ArgumentException("Choose a Frontend entry point.");
             ValidateConfig(node);
             Generated++;
             Arrive(node, new SimRequest { Id = Generated, IsWrite = write, RecordKey = key,
@@ -130,6 +153,7 @@ namespace SysARchitect.Simulation
             var node = FindNode(id);
             if (node == null) return;
             node.Status = NodeStatus.Crashed;
+            node.Cache?.Clear();
             FailPending(node, "Injected failure");
         }
 
@@ -161,6 +185,8 @@ namespace SysARchitect.Simulation
                 node.RouteIndex = node.Arrivals = node.Processed = node.RejectedThisTick = 0;
                 node.FailureReason = null;
                 node.Database?.Reset();
+                node.Cache?.Reset();
+                node.CacheBypasses = 0;
             }
         }
 
@@ -176,12 +202,32 @@ namespace SysARchitect.Simulation
                 if (node.Status == NodeStatus.Recovering && Time + Epsilon >= node.RecoveryAt)
                     node.Status = NodeStatus.Healthy;
                 node.Database?.AdvanceTo(Time, IsAvailable(node));
+                node.Database?.BeginTick(node.Capacity, TickSeconds);
             }
             GenerateTraffic();
             foreach (var node in nodes)
             {
                 if (!IsAvailable(node)) continue;
                 ExpireAndComplete(node);
+                if (node.Database != null)
+                {
+                    int waiting = node.Waiting.Count;
+                    while (waiting-- > 0)
+                    {
+                        var request = node.Waiting.Dequeue();
+                        int member = node.Database.SelectMember(request.IsWrite, request.RecordKey, true);
+                        if (member < 0 || node.Database.Members[member].Status != NodeStatus.Healthy)
+                        {
+                            node.Database.Execute(request.IsWrite, request.RecordKey, out string error, member);
+                            Fail(node, request, false, error);
+                            continue;
+                        }
+                        if (!node.Database.TryStart(member)) { node.Waiting.Enqueue(request); continue; }
+                        request.DatabaseMember = member;
+                        StartProcessing(node, request);
+                    }
+                    continue;
+                }
                 // Idle capacity is not banked for a later burst.
                 node.Credit += node.Capacity * TickSeconds;
                 int budget = (int)Math.Floor(node.Credit + Epsilon);
@@ -189,18 +235,24 @@ namespace SysARchitect.Simulation
                 while (budget-- > 0 && node.Waiting.Count > 0)
                 {
                     var request = node.Waiting.Dequeue();
-                    request.ReadyAt = Time + node.LatencyMs / 1000;
-                    node.Processing.Add(request);
-                    node.Processed++;
+                    StartProcessing(node, request);
                 }
             }
             foreach (var transfer in transfers)
             {
+                OnTransferPath?.Invoke(transfer.request.Id, transfer.source.Id, transfer.target.Id, transfer.request.Path);
                 OnTransfer?.Invoke(transfer.request.Id, transfer.source.Id, transfer.target.Id);
                 Arrive(transfer.target, transfer.request);
             }
             transfers.Clear();
             foreach (var node in nodes) UpdateResources(node);
+        }
+
+        private void StartProcessing(SimulationNode node, SimRequest request)
+        {
+            request.ReadyAt = Time + node.LatencyMs / 1000;
+            node.Processing.Add(request);
+            node.Processed++;
         }
 
         private void GenerateTraffic()
@@ -219,7 +271,7 @@ namespace SysARchitect.Simulation
                 {
                     if (node.Type != NodeType.Frontend || selected-- != 0) continue;
                     Generated++;
-                    Arrive(node, new SimRequest { Id = Generated, IsWrite = Generated % 4 == 0, RecordKey = (int)((Generated / 4) % 32),
+                    Arrive(node, new SimRequest { Id = Generated, IsWrite = Generated % 4 == 0, RecordKey = (int)((Generated / (Generated % 4 == 0 ? 4 : 3)) % 32),
                         CreatedAt = Time, Deadline = Time + node.TimeoutMs / 1000 });
                     break;
                 }
@@ -273,35 +325,136 @@ namespace SysARchitect.Simulation
 
         private void Route(SimulationNode source, SimRequest request)
         {
-            if (source.Database != null && !source.Database.Execute(request.IsWrite, request.RecordKey, out string error))
+            if (++request.Hops > 32) { Fail(source, request, false, "Routing hop limit exceeded"); return; }
+            if (source.Cache != null) { RouteCache(source, request); return; }
+            if (source.Database != null)
             {
-                Fail(source, request, false, error);
+                if (!source.Database.Execute(request.IsWrite, request.RecordKey, out string error, request.DatabaseMember))
+                { Fail(source, request, false, error); return; }
+                if (request.IsWrite)
+                    foreach (var node in nodes) node.Cache?.Invalidate(source.Id, request.RecordKey);
+                if (!request.IsWrite && request.CacheId != null && FindNode(request.CacheId) is SimulationNode fillCache && IsAvailable(fillCache)
+                    && FindNode(request.CacheOwner) is SimulationNode owner && IsAvailable(owner) && owner.Targets.Contains(request.CacheId))
+                {
+                    request.ReadVersion = source.Database.MemberVersion(request.DatabaseMember, request.RecordKey);
+                    request.PopulateCache = true;
+                    SendFromOwner(source, request, request.CacheId, RequestPathKind.CacheFill);
+                    return;
+                }
+                Complete(source, request);
                 return;
             }
-            if (++request.Hops > 32) { Fail(source, request, false, "Routing hop limit exceeded"); return; }
+            if (source.Type == NodeType.Backend)
+            {
+                SimulationNode cache = null, storage = null;
+                foreach (string id in source.Targets)
+                {
+                    var target = FindNode(id);
+                    if (target?.Type == NodeType.Cache) cache = target;
+                    if (target?.Type == NodeType.Database || (target?.Type == NodeType.LoadBalancer && target.RoutingRole == LoadBalancerRole.Database)) storage = target;
+                }
+                if (cache != null)
+                {
+                    var database = ResolveDatabase(storage);
+                    if (database == null) { Fail(source, request, false, "Cache-aside requires Backend > Cache and Backend > Database or Database Router with one cluster."); return; }
+                    request.CacheOwner = source.Id; request.CacheId = cache.Id;
+                    request.DatabaseId = database.Id; request.StorageRoute = storage.Id;
+                    if (request.IsWrite) { Send(source, storage, request, RequestPathKind.DatabaseWrite); return; }
+                    if (!IsAvailable(cache))
+                    {
+                        source.CacheBypasses++;
+                        Send(source, storage, request, RequestPathKind.CacheMiss);
+                        return;
+                    }
+                    request.CacheLookup = true;
+                    Send(source, cache, request, RequestPathKind.CacheLookup);
+                    return;
+                }
+            }
+            if (source.Type == NodeType.LoadBalancer && source.RoutingRole == LoadBalancerRole.Database)
+            {
+                if (source.Targets.Count != 1 || FindNode(source.Targets[0])?.Type != NodeType.Database)
+                { Fail(source, request, false, "A Database Router must target one expandable Database cluster."); return; }
+                Send(source, FindNode(source.Targets[0]), request, request.IsWrite ? RequestPathKind.DatabaseWrite : RequestPathKind.DatabaseRead);
+                return;
+            }
             if (source.Targets.Count == 0)
             {
                 if (source.Type == NodeType.Frontend || source.Type == NodeType.LoadBalancer || source.Type == NodeType.KubernetesNode)
                     Fail(source, request, false, "No service route configured");
-                else
-                {
-                    Succeeded++;
-                    totalLatencyMs += (Time - request.CreatedAt) * 1000;
-                    OnRequestFinished?.Invoke(request.Id, source.Id, true);
-                }
+                else Complete(source, request);
                 return;
             }
-            // All multi-target service routes use round-robin. LBs skip unavailable targets.
             for (int i = 0; i < source.Targets.Count; i++)
             {
                 int index = source.RouteIndex % source.Targets.Count;
                 source.RouteIndex = (index + 1) % source.Targets.Count;
                 var target = FindNode(source.Targets[index]);
                 if (target == null || (source.Type == NodeType.LoadBalancer && !IsAvailable(target))) continue;
-                transfers.Add((source, target, request));
+                Send(source, target, request, source.Type == NodeType.LoadBalancer ? RequestPathKind.ApplicationRoute
+                    : request.IsWrite ? RequestPathKind.DatabaseWrite : RequestPathKind.Request);
                 return;
             }
             Fail(source, request, false, "No healthy routing target");
+        }
+
+        private SimulationNode ResolveDatabase(SimulationNode storage)
+        {
+            if (storage?.Database != null) return storage;
+            if (storage?.Type == NodeType.LoadBalancer && storage.RoutingRole == LoadBalancerRole.Database && storage.Targets.Count == 1)
+            {
+                var target = FindNode(storage.Targets[0]);
+                if (target?.Database != null) return target;
+            }
+            return null;
+        }
+
+        private void RouteCache(SimulationNode cache, SimRequest request)
+        {
+            if (request.CacheId != cache.Id || request.CacheOwner == null)
+            { Fail(cache, request, false, "Cache-aside reads must be initiated by a Backend with a storage fallback."); return; }
+            var database = FindNode(request.DatabaseId);
+            if (database?.Database == null) { Fail(cache, request, false, "Cache storage cluster was removed."); return; }
+            if (request.PopulateCache)
+            {
+                // Do not fill from a stale replica or race an intervening committed write.
+                if (request.ReadVersion > 0 && request.ReadVersion == database.Database.LogicalVersion(request.RecordKey))
+                    cache.Cache.Populate(database.Id, request.RecordKey, request.ReadVersion);
+                Complete(cache, request);
+                return;
+            }
+            if (!request.CacheLookup) { Fail(cache, request, false, "Unsupported Cache request."); return; }
+            request.CacheLookup = false;
+            bool hit = cache.Cache.Read(database.Id, request.RecordKey, out _);
+            OnCacheAccess?.Invoke(request.Id, request.CacheOwner, cache.Id, hit);
+            if (hit) Complete(cache, request);
+            else SendFromOwner(cache, request, request.StorageRoute, RequestPathKind.CacheMiss);
+        }
+
+        private void SendFromOwner(SimulationNode current, SimRequest request, string destination, RequestPathKind path)
+        {
+            var owner = FindNode(request.CacheOwner);
+            if (owner == null || !IsAvailable(owner) || !owner.Targets.Contains(destination) || !owner.Targets.Contains(request.CacheId))
+            { Fail(current, request, false, "Cache-aside dependency link or Backend was removed/unavailable."); return; }
+            // Replies to the Backend are implicit; its next request follows an actual owned edge.
+            Send(owner, FindNode(destination), request, path);
+        }
+
+        private void Send(SimulationNode source, SimulationNode target, SimRequest request, RequestPathKind path)
+        {
+            if (target == null) { Fail(source, request, false, "Routing target was removed."); return; }
+            var validation = ConnectionRules.Validate(source.Type, target.Type, source.RoutingRole, target.RoutingRole);
+            if (!validation.isValid) { Fail(source, request, false, validation.errorMessage); return; }
+            request.Path = path;
+            request.DatabaseMember = -1;
+            transfers.Add((source, target, request));
+        }
+
+        private void Complete(SimulationNode node, SimRequest request)
+        {
+            Succeeded++;
+            totalLatencyMs += (Time - request.CreatedAt) * 1000;
+            OnRequestFinished?.Invoke(request.Id, node.Id, true);
         }
 
         private void UpdateResources(SimulationNode node)
@@ -309,7 +462,15 @@ namespace SysARchitect.Simulation
             node.IncomingRate = node.Arrivals / TickSeconds;
             double utilization = node.Capacity <= 0 ? 0 : Math.Min(1, node.Processed / (node.Capacity * TickSeconds));
             node.Cpu += .2 * (utilization - node.Cpu);
-            node.MemoryMB = 32 + node.Waiting.Count + node.Processing.Count;
+            node.MemoryMB = 32 + node.Waiting.Count + node.Processing.Count + (node.Cache?.Count ?? 0) * .125;
+            if (node.Database != null)
+            {
+                node.Database.EndTick(node.Capacity, TickSeconds);
+                double cpu = 0, memory = 0;
+                foreach (var member in node.Database.Members) { cpu += member.Cpu; memory += member.MemoryMB; }
+                node.Cpu = cpu / node.Database.Members.Count;
+                node.MemoryMB = memory + node.Waiting.Count + node.Processing.Count;
+            }
             if (!IsAvailable(node)) { node.Cpu = 0; return; }
             if (node.MemoryMB > node.MemoryLimitMB)
             {
@@ -324,6 +485,8 @@ namespace SysARchitect.Simulation
 
         private void Fail(SimulationNode node, SimRequest request, bool timeout, string reason)
         {
+            // Filling the cache is an optional optimization after a successful storage read.
+            if (node.Cache != null && request.PopulateCache && !timeout) { Complete(node, request); return; }
             Failed++;
             node.Failed++;
             LastFailureReason = reason;

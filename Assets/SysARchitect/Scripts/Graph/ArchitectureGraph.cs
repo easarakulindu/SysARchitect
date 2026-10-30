@@ -37,6 +37,7 @@ namespace SysARchitect.Graph
 
         /// <summary>Fired when a connection is removed.</summary>
         public event Action<GraphConnection> OnConnectionRemoved;
+        public event Action<GraphNode> OnNodeConfigured;
 
         /// <summary>
         /// Add a new infrastructure node at the given world position.
@@ -65,6 +66,9 @@ namespace SysARchitect.Graph
             var graphNode = go.AddComponent<GraphNode>();
             graphNode.NodeId = nodeId;
             graphNode.Type = type;
+            // Default cheap ingress/router/cache services leave room to demonstrate backend scaling.
+            graphNode.ProcessingCapacity = type == NodeType.Frontend || type == NodeType.LoadBalancer || type == NodeType.Cache ? 1000
+                : type == NodeType.Database ? 500 : 100;
             graphNode.DisplayName = displayName;
 
             // Add visual representation
@@ -100,7 +104,39 @@ namespace SysARchitect.Graph
                 return (false, "This connection creates a request-routing cycle.");
 
             // Check type-level rules
-            return ConnectionRules.Validate(source.Type, target.Type);
+            if (source.Type == NodeType.LoadBalancer && source.RoutingRole == LoadBalancerRole.Database &&
+                connections.Any(c => c.Source == source))
+                return (false, "Connect a Database Router to one expandable Database cluster; configure its internal replicas or shards.");
+            if (source.Type == NodeType.Backend)
+            {
+                bool storage = target.Type == NodeType.Database || target.Type == NodeType.LoadBalancer;
+                if (target.Type == NodeType.Cache && connections.Any(c => c.Source == source && c.Target.Type == NodeType.Cache))
+                    return (false, "This cache-aside scenario supports one Cache per Backend.");
+                if (storage && connections.Any(c => c.Source == source && (c.Target.Type == NodeType.Database || c.Target.Type == NodeType.LoadBalancer)))
+                    return (false, "Choose one Database or Database Router per Backend; a router targets one expandable cluster.");
+            }
+            return ConnectionRules.Validate(source.Type, target.Type, source.RoutingRole, target.RoutingRole);
+        }
+
+        public bool TrySetRoutingRole(GraphNode node, LoadBalancerRole role, out string message)
+        {
+            if (node == null || !nodes.Contains(node) || node.Type != NodeType.LoadBalancer)
+            { message = "Select a Load Balancer to configure its role."; return false; }
+            foreach (var edge in connections)
+            {
+                if (edge.Source != node && edge.Target != node) continue;
+                var result = ConnectionRules.Validate(edge.Source.Type, edge.Target.Type,
+                    edge.Source == node ? role : edge.Source.RoutingRole,
+                    edge.Target == node ? role : edge.Target.RoutingRole);
+                if (!result.isValid) { message = "Remove incompatible links before changing role. " + result.errorMessage; return false; }
+            }
+            if (role == LoadBalancerRole.Database && connections.Count(c => c.Source == node) > 1)
+            { message = "A Database Router targets one expandable cluster. Remove extra outgoing links first."; return false; }
+            node.RoutingRole = role;
+            node.GetComponent<NodeVisual>().UpdateLabel(node.DisplayName);
+            OnNodeConfigured?.Invoke(node);
+            message = role == LoadBalancerRole.Database ? "Database Router: Backend > Router > Database cluster." : "Application routing: Frontend > Load Balancer > Backends.";
+            return true;
         }
 
         private bool CanReach(GraphNode start, GraphNode destination, HashSet<GraphNode> visited)
@@ -276,9 +312,11 @@ namespace SysARchitect.Graph
             foreach (var backend in backends)
             {
                 bool connectsToDb = connections.Any(c =>
-                    c.Source == backend && c.Target.Type == NodeType.Database);
+                    c.Source == backend && (c.Target.Type == NodeType.Database || (c.Target.Type == NodeType.LoadBalancer && c.Target.RoutingRole == LoadBalancerRole.Database)));
                 bool connectsToCache = connections.Any(c =>
                     c.Source == backend && c.Target.Type == NodeType.Cache);
+                if (connectsToCache && !connectsToDb)
+                    warnings.Add($"{backend.DisplayName}: cache-aside needs a Database or Database Router fallback as well as Cache.");
                 if (!connectsToDb && !connectsToCache)
                 {
                     warnings.Add($"{backend.DisplayName} is not connected to any Database or Cache.");
@@ -292,9 +330,9 @@ namespace SysARchitect.Graph
                 var targets = connections.Where(c => c.Source == lb).ToList();
                 if (targets.Count == 0)
                 {
-                    warnings.Add($"{lb.DisplayName} has no backend targets. Connect it to Backend servers.");
+                    warnings.Add($"{lb.DisplayName} has no backend targets. Connect it to the targets supported by its configured role.");
                 }
-                else if (targets.Count == 1)
+                else if (targets.Count == 1 && lb.RoutingRole == LoadBalancerRole.Application)
                 {
                     warnings.Add($"{lb.DisplayName} has only one target. Add more backends for load distribution.");
                 }

@@ -12,6 +12,8 @@ namespace SysARchitect.Graph
         [SerializeField] private string nodeId;
         [SerializeField] private NodeType type;
         [SerializeField] private string displayName;
+        [SerializeField] private LoadBalancerRole routingRole;
+        public LoadBalancerRole RoutingRole { get => routingRole; set => routingRole = value; }
         [SerializeField] private NodeStatus status = NodeStatus.Healthy;
 
         // --- Simulation properties (used by Milestone 2+) ---
@@ -52,7 +54,7 @@ namespace SysARchitect.Graph
             set => status = value;
         }
 
-        /// <summary>Maximum requests per second this node can handle.</summary>
+        /// <summary>Service capacity per node; per member for an expandable Database.</summary>
         public float ProcessingCapacity
         {
             get => processingCapacity;

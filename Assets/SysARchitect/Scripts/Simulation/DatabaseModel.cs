@@ -14,7 +14,12 @@ namespace SysARchitect.Simulation
         public long Reads { get; internal set; }
         public long Writes { get; internal set; }
         internal readonly Dictionary<int, long> records = new Dictionary<int, long>();
-        internal double RecoverAt;
+        internal double RecoverAt, Credit;
+        internal int Budget, Started;
+        public double Cpu { get; internal set; }
+        public double MemoryMB { get; internal set; } = 32;
+        public long Completed { get; internal set; }
+        public long Failed { get; internal set; }
     }
 
     /// <summary>Logical record versions: copies for replication, partitions for sharding.
@@ -94,10 +99,8 @@ namespace SysARchitect.Simulation
             return (key % count + count) % count;
         }
 
-        public bool Execute(bool write, int key, out string error)
+        public int SelectMember(bool write, int key, bool requireBudget = false)
         {
-            OperationSequence++;
-            LastOperationSucceeded = false;
             int index = Mode == DatabaseMode.Sharding ? ShardFor(key, members.Count) : 0;
             if (Mode == DatabaseMode.Replication && !write)
             {
@@ -106,19 +109,64 @@ namespace SysARchitect.Simulation
                 {
                     int candidate = 1 + nextReader;
                     nextReader = (nextReader + 1) % (members.Count - 1);
-                    if (members[candidate].Status == NodeStatus.Healthy) { index = candidate; break; }
+                    if (members[candidate].Status == NodeStatus.Healthy && (!requireBudget || members[candidate].Budget > 0)) { index = candidate; break; }
                 }
-                if (index < 0 && members[0].Status == NodeStatus.Healthy) index = 0;
+                if (index < 0 && requireBudget)
+                    for (int i = 1; i < members.Count; i++)
+                        if (members[i].Status == NodeStatus.Healthy) return SelectMember(write, key, false);
+                if (index < 0 && members[0].Status == NodeStatus.Healthy && (!requireBudget || members[0].Budget > 0)) index = 0;
+                if (index < 0 && requireBudget) return SelectMember(write, key, false);
             }
+            return index;
+        }
+
+        public long LogicalVersion(int key) => records.TryGetValue(key, out long value) ? value : 0;
+        public long MemberVersion(int index, int key) => index >= 0 && index < members.Count && members[index].records.TryGetValue(key, out long value) ? value : 0;
+
+        public void BeginTick(double capacity, double seconds)
+        {
+            foreach (var member in members)
+            {
+                member.Started = 0;
+                member.Credit += capacity * seconds;
+                member.Budget = (int)System.Math.Floor(member.Credit + 1e-9);
+                member.Credit -= member.Budget;
+            }
+        }
+
+        public bool TryStart(int index)
+        {
+            if (index < 0 || index >= members.Count || members[index].Status != NodeStatus.Healthy || members[index].Budget <= 0) return false;
+            members[index].Budget--; members[index].Started++;
+            return true;
+        }
+
+        public void EndTick(double capacity, double seconds)
+        {
+            foreach (var member in members)
+            {
+                double usage = member.Status == NodeStatus.Healthy && capacity > 0 ? System.Math.Min(1, member.Started / (capacity * seconds)) : 0;
+                member.Cpu += .2 * (usage - member.Cpu);
+                member.MemoryMB = 32 + member.records.Count * .125;
+            }
+        }
+
+        public bool Execute(bool write, int key, out string error, int? routedMember = null)
+        {
+            OperationSequence++;
+            LastOperationSucceeded = false;
+            int index = routedMember ?? SelectMember(write, key);
             LastMemberIndex = index;
-            if (index < 0 || members[index].Status != NodeStatus.Healthy)
+            if (index < 0 || index >= members.Count || members[index].Status != NodeStatus.Healthy)
             {
                 FailedOperations++;
-                error = index < 0 ? "No database member is available" : $"{MemberName(index)} unavailable";
+                if (index >= 0 && index < members.Count) members[index].Failed++;
+                error = index < 0 || index >= members.Count ? "No database member is available" : $"{MemberName(index)} unavailable";
                 LastOperation = $"{(write ? "Write" : "Read")} key {key}: {error}.";
                 return false;
             }
             var member = members[index];
+            member.Completed++;
             if (write)
             {
                 records[key] = ++version;
@@ -204,7 +252,7 @@ namespace SysARchitect.Simulation
             foreach (var member in members)
             {
                 member.records.Clear(); member.Status = NodeStatus.Healthy;
-                member.Reads = member.Writes = 0; member.RecoverAt = 0;
+                member.Reads = member.Writes = member.Completed = member.Failed = 0; member.RecoverAt = member.Credit = member.Cpu = 0; member.Budget = member.Started = 0; member.MemoryMB = 32;
             }
         }
 

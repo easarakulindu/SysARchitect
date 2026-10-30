@@ -14,19 +14,24 @@ namespace SysARchitect.Graph
         /// <param name="sourceType">Type of the source node.</param>
         /// <param name="targetType">Type of the target node.</param>
         /// <returns>A tuple of (isValid, errorMessage). errorMessage is null when valid.</returns>
-        public static (bool isValid, string errorMessage) Validate(NodeType sourceType, NodeType targetType)
+        public static (bool isValid, string errorMessage) Validate(NodeType sourceType, NodeType targetType,
+            LoadBalancerRole sourceRole = LoadBalancerRole.Application, LoadBalancerRole targetRole = LoadBalancerRole.Application)
         {
-            // Self-connection is checked at a higher level (same instance check).
-            // Here we check type-level rules.
-
-            // Frontend can connect to: Backend, LoadBalancer, Cache
-            // Backend can connect to: Database, Cache, Backend (microservice), Container, KubernetesPod
-            // LoadBalancer can connect to: Backend, Container, KubernetesPod
-            // Database can connect to: (nothing outgoing in basic model — it responds)
-            // Cache can connect to: Database, Backend
-            // Container can connect to: Database, Cache, Backend, Container
-            // KubernetesNode can connect to: KubernetesPod
-            // KubernetesPod can connect to: Database, Cache, Backend, KubernetesPod
+            if (targetType == NodeType.LoadBalancer)
+            {
+                if (targetRole == LoadBalancerRole.Database)
+                    return sourceType == NodeType.Backend ? (true, null)
+                        : (false, "Database routers accept Backend requests. Use Backend > Database Router > Database cluster.");
+                if (sourceType != NodeType.Frontend)
+                    return (false, "This learning scenario uses Frontend > Application Load Balancer > Backends. For Backend > database routing, configure the target as Database Router first.");
+            }
+            if (sourceType == NodeType.LoadBalancer && sourceRole == LoadBalancerRole.Database)
+                return targetType == NodeType.Database ? (true, null)
+                    : (false, "A Database Router connects to one expandable Database cluster. Configure that Database for replication or sharding.");
+            if (sourceType == NodeType.Cache)
+                return (false, "Cache-aside is controlled by a Backend: connect Backend > Cache and Backend > Database (or Database Router). The Cache does not call the Database directly.");
+            if (sourceType == NodeType.Frontend && targetType == NodeType.Cache)
+                return (false, "For cache-aside, route Frontend > Backend (optionally through a Load Balancer), then connect the Backend to both Cache and storage.");
 
             switch (sourceType)
             {
@@ -42,7 +47,7 @@ namespace SysARchitect.Graph
                     return (false, $"Frontend cannot connect to {FormatTypeName(targetType)}. Try connecting to a Backend or Load Balancer.");
 
                 case NodeType.Backend:
-                    if (targetType == NodeType.Database ||
+                    if (targetType == NodeType.LoadBalancer || targetType == NodeType.Database ||
                         targetType == NodeType.Cache ||
                         targetType == NodeType.Backend ||
                         targetType == NodeType.Container ||
@@ -50,8 +55,6 @@ namespace SysARchitect.Graph
                         return (true, null);
                     if (targetType == NodeType.Frontend)
                         return (false, "Backend should not connect back to Frontend. The Frontend already sends requests to the Backend.");
-                    if (targetType == NodeType.LoadBalancer)
-                        return (false, "Backend typically does not connect to a Load Balancer. The Load Balancer distributes requests to Backends.");
                     return (false, $"Backend cannot connect to {FormatTypeName(targetType)}.");
 
                 case NodeType.LoadBalancer:
@@ -62,19 +65,13 @@ namespace SysARchitect.Graph
                     if (targetType == NodeType.Frontend)
                         return (false, "Load Balancer distributes requests to backend services, not to frontends.");
                     if (targetType == NodeType.Database)
-                        return (false, "Load Balancer should distribute to application servers, not directly to databases.");
+                        return (false, "Application Load Balancers distribute to Backend instances. For Backend > Database cluster, configure this component as Database Router.");
                     if (targetType == NodeType.LoadBalancer)
                         return (false, "Chaining Load Balancers is not supported in this simulation.");
                     return (false, $"Load Balancer cannot connect to {FormatTypeName(targetType)}. Connect it to Backend servers.");
 
                 case NodeType.Database:
                     return (false, "Databases receive requests but do not initiate outgoing connections in this model. Connect a Backend to the Database instead.");
-
-                case NodeType.Cache:
-                    if (targetType == NodeType.Database ||
-                        targetType == NodeType.Backend)
-                        return (true, null);
-                    return (false, $"Cache cannot connect to {FormatTypeName(targetType)}. A Cache can connect to a Database (cache-aside) or a Backend.");
 
                 case NodeType.Container:
                     if (targetType == NodeType.Database ||
