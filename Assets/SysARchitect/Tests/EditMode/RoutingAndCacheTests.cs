@@ -57,6 +57,8 @@ namespace SysARchitect.Tests
             Assert.That(ConnectionRules.Validate(NodeType.LoadBalancer, NodeType.Backend, LoadBalancerRole.Database).isValid, Is.False);
             Assert.That(ConnectionRules.Validate(NodeType.Frontend, NodeType.LoadBalancer, targetRole: LoadBalancerRole.Database).isValid, Is.False);
             Assert.That(ConnectionRules.Validate(NodeType.Cache, NodeType.Database).errorMessage, Does.Contain("Backend"));
+            Assert.That(ConnectionRules.Validate(NodeType.Container, NodeType.Cache).isValid, Is.False);
+            Assert.That(ConnectionRules.Validate(NodeType.KubernetesPod, NodeType.Cache).isValid, Is.False);
         }
 
         [Test]
@@ -181,6 +183,16 @@ namespace SysARchitect.Tests
             for (int i = 0; i < 40 && db.Reads == 0; i++) Tick(engine, 1);
             engine.InjectFailure("cache"); Drain(engine);
             Assert.That(engine.Succeeded, Is.EqualTo(1)); Assert.That(engine.Failed, Is.Zero);
+        }
+
+        [Test]
+        public void RepeatedAutomaticWorkloadProducesCacheHitsAndReducesDatabaseReads()
+        {
+            var without = Cached(false); var cached = Cached();
+            foreach (var engine in new[] { without, cached }) { engine.RequestsPerSecond = 60; Tick(engine, 1000); engine.RequestsPerSecond = 0; Drain(engine); }
+            Assert.That(cached.Generated, Is.EqualTo(3000)); Assert.That(cached.Succeeded, Is.EqualTo(3000));
+            Assert.That(cached.Failed, Is.Zero); Assert.That(cached.FindNode("cache").Cache.Hits, Is.GreaterThan(0));
+            Assert.That(cached.FindNode("db").Database.Reads, Is.LessThan(without.FindNode("db").Database.Reads * .9));
         }
     }
 }

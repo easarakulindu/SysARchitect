@@ -30,8 +30,8 @@ namespace SysARchitect.Graph
                     : (false, "A Database Router connects to one expandable Database cluster. Configure that Database for replication or sharding.");
             if (sourceType == NodeType.Cache)
                 return (false, "Cache-aside is controlled by a Backend: connect Backend > Cache and Backend > Database (or Database Router). The Cache does not call the Database directly.");
-            if (sourceType == NodeType.Frontend && targetType == NodeType.Cache)
-                return (false, "For cache-aside, route Frontend > Backend (optionally through a Load Balancer), then connect the Backend to both Cache and storage.");
+            if (targetType == NodeType.Cache && sourceType != NodeType.Backend)
+                return (false, "This cache-aside scenario requires a Backend. Route Frontend > Backend (optionally through a Load Balancer), then connect Backend to both Cache and storage.");
 
             switch (sourceType)
             {
