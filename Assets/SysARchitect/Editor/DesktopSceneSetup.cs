@@ -94,6 +94,7 @@ namespace SysARchitect.Editor
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1280, 800);
             scaler.matchWidthOrHeight = .5f;
+            scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.Expand;
             var left = Panel(canvasGo.transform, "Toolbox", 0, 0, 210, 680);
             Label(left, "SysARchitect", 12, 12, 190, 36, 24);
             Label(left, "BUILD YOUR ARCHITECTURE", 12, 54, 190, 25, 12);
@@ -233,6 +234,7 @@ namespace SysARchitect.Editor
             var label = Label(rect, text, 6, 3, width - 12, height - 6, 14);
             label.alignment = TextAlignmentOptions.Center;
             // Stretch labels so the same prefab also fits narrower connection lists.
+            label.rectTransform.anchorMin = Vector2.zero;
             label.rectTransform.anchorMax = Vector2.one;
             label.rectTransform.offsetMin = new Vector2(6, 3);
             label.rectTransform.offsetMax = new Vector2(-6, -3);

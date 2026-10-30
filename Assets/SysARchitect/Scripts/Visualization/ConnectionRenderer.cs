@@ -49,7 +49,7 @@ namespace SysARchitect.Visualization
 
             m_LineRenderer = GetComponent<LineRenderer>();
             m_LineRenderer.useWorldSpace = true;
-            m_LineRenderer.positionCount = 2;
+            m_LineRenderer.positionCount = 5;
             m_LineRenderer.startWidth = k_LineWidth;
             m_LineRenderer.endWidth = k_LineWidth;
             m_LineRenderer.numCapVertices = 2;
@@ -98,6 +98,12 @@ namespace SysARchitect.Visualization
         {
             m_LineRenderer.SetPosition(0, m_SourceTransform.position);
             m_LineRenderer.SetPosition(1, m_TargetTransform.position);
+            Vector3 direction = (m_TargetTransform.position - m_SourceTransform.position).normalized;
+            Vector3 side = Vector3.Cross(direction, Vector3.up).normalized;
+            float size = Mathf.Min(.055f, Vector3.Distance(m_SourceTransform.position, m_TargetTransform.position) * .2f);
+            m_LineRenderer.SetPosition(2, m_TargetTransform.position - direction * size + side * size * .5f);
+            m_LineRenderer.SetPosition(3, m_TargetTransform.position);
+            m_LineRenderer.SetPosition(4, m_TargetTransform.position - direction * size - side * size * .5f);
         }
 
         void AnimateUV()

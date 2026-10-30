@@ -17,6 +17,7 @@ namespace SysARchitect.Visualization
         System.Action m_OnComplete;
         bool m_IsActive;
         MeshRenderer m_MeshRenderer;
+        public bool IsPaused { get; set; }
 
         /// <summary>Small sphere radius used by the factory.</summary>
         const float k_Radius = 0.02f;
@@ -101,7 +102,7 @@ namespace SysARchitect.Visualization
 
         void Update()
         {
-            if (!m_IsActive) return;
+            if (!m_IsActive || IsPaused) return;
             if (m_Source == null || m_Target == null)
             {
                 // Source or target was destroyed mid-flight — clean up.

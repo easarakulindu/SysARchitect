@@ -8,7 +8,7 @@ Target demonstration: November 2, 2026. No remote pushes are authorized.
   AR Foundation / ARCore 6.6.2, XR Interaction Toolkit 3.6.1, Test Framework 1.8.0.
   Versions verified in ProjectVersion, manifest, lockfile and installed package metadata.
   Imported XRI samples are in a 3.5.1 directory; that is not the installed package version.
-- Two existing commits: initial template and editor settings. All 23 SysARchitect C#
+- Two existing commits: initial template and editor settings. All 21 SysARchitect C#
   files and their metadata were untracked. They contained graph ownership/validation,
   procedural visuals, mouse controllers, toolbox and inspector UI. Preserved in a local
   foundation commit with the missing clear-workspace callback repaired.
@@ -52,7 +52,7 @@ Headless tests do not establish visual quality or real mouse usability.
 ## Remaining milestones
 
 1. Builder foundation: implemented and automated lifecycle checks pass; manual visual/input QA pending.
-2. Simulation engine: next priority (traffic, fixed ticks, queues, timeouts, load balancing, failure/restart).
+2. Simulation engine: implemented and wired to the desktop scene; see validation below.
 3. Database replication/sharding: absent.
 4. Five lessons, Docker/Kubernetes controllers, 20-question quiz and progress: absent.
 5. Shared AR placement and Android deployment: template only; no device test performed.
@@ -72,6 +72,50 @@ Multiple outgoing service edges choose one target by round-robin (not a fan-out 
 
 The same topology, configuration and tick sequence reproduce results within the same
 runtime. No cross-platform floating-point identity is claimed. Packet animation is a
-presentation of transfers and does not drive processing. 16 Edit Mode test cases passed,
+presentation of transfers and does not drive processing. 17 simulation Edit Mode test cases passed,
 including request conservation against actual queue/processing counts on every tick.
-Scene simulation controls and presentation are the next integration step.
+Scene controls and resource/packet presentation are now integrated.
+
+## Integrated desktop demonstration
+
+The scene has Run, Pause, Step (50 ms), Reset, Build and a 0–500 requests/s traffic slider.
+Build pauses simulation so editing can continue. Adding/removing nodes or links updates
+simulation topology without rebuilding the scene. Reset preserves topology/configuration,
+clears counters/packets and restores node health. The inspector reports CPU, memory,
+incoming rate, queue, local processing/failure/rejection/timeout totals and mean node
+latency; global counters report end-to-end success/failure and successful latency.
+CPU uses a fixed-tick exponential average; fresh transfers do not count as sustained
+backlog. Animation is sampled (maximum 64 packets, two new visuals per tick), freezes
+on Pause, and never decides outcomes. Overload pulses red; crash/recovery are labelled.
+
+Suggested demonstration:
+
+1. Place Frontend, Load Balancer, two Backends and one Database.
+2. Connect Frontend > Load Balancer > each Backend, then each Backend > Database.
+3. Set Frontend, Load Balancer and Database capacity to 500 req/s; set each Backend to 40.
+4. Run at 60 req/s, inspect balanced backend utilization, then raise traffic to 160 req/s.
+   Observe queues, latency and rejected requests. A load balancer alone adds no capacity.
+5. Select a Backend and Inject failure. The load balancer skips it; the frontend remains
+   running. Restart shows one second of recovery in simulation time. Reduce traffic to
+   drain queues, or add/connect backend capacity. Pause, step, then reset.
+
+The first graphical test exposed oversized world labels, incorrectly anchored button
+text, and inward-facing cylinder caps. These were repaired and visually rechecked.
+Automated coverage now includes 25 Edit Mode cases (17 simulation, 8 mesh winding) and
+3 Play Mode cases (builder lifecycle, graph validation, integrated controls and packets).
+Test artifacts are in `/tmp/sysarchitect-simulation-tests.xml` and
+`/tmp/sysarchitect-integrated-tests.xml`; the rendered demo capture is
+`/tmp/sysarchitect-desktop-demo.png`. Full mouse-driven usability is still a manual check.
+Container/Pod/Worker nodes currently have generic service behavior and distinct shapes;
+Docker images/hosts, deployments and reconciliation are not implemented.
+
+Use **SysARchitect > Build Linux Desktop Demo** for a local build containing only the
+desktop workspace. Output: `Builds/Linux/SysARchitect.x86_64` (ignored by Git).
+
+## Next priority before November 2
+
+Finish desktop mouse usability QA and save/load of learner architectures, then implement
+database replication/sharding against this same engine. Follow with the five guided
+lessons, Docker/Kubernetes behavior, quiz/progress, shared AR placement and Android
+validation. The complete product is not finished; no physical AR, Android build, or
+mobile performance verification has been claimed.

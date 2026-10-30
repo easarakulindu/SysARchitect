@@ -5,6 +5,7 @@ using SysARchitect.Core;
 using SysARchitect.Graph;
 using SysARchitect.Interaction;
 using SysARchitect.Visualization;
+using SysARchitect.Simulation;
 
 namespace SysARchitect.UI
 {
@@ -35,8 +36,26 @@ namespace SysARchitect.UI
         [SerializeField] private Button rotateButton;
         [SerializeField] private Transform connectionContainer;
         [SerializeField] private GameObject connectionButtonPrefab;
+        [SerializeField] private SimulationController simulation;
+        [SerializeField] private TextMeshProUGUI resourceText;
 
         private GraphNode currentNode;
+        public GraphNode CurrentNode => currentNode;
+
+        private void Update()
+        {
+            if (currentNode == null || simulation == null) return;
+            var state = simulation.Engine.FindNode(currentNode.NodeId);
+            if (state == null) return;
+            nodeStatusText.text = state.Status.ToString();
+            nodeStatusText.color = NodeColorPalette.GetStatusColor(state.Status);
+            if (resourceText != null)
+                resourceText.text = $"CPU {state.Cpu:P0} | Memory {state.MemoryMB:F0} MB\n" +
+                    $"Incoming {state.IncomingRate:F0}/s | Queue {state.QueueLength}\n" +
+                    $"Processed {state.Completed} | Failed {state.Failed}\n" +
+                    $"Rejected {state.Rejected} | Timeouts {state.Timeouts}\n" +
+                    $"Mean node latency {state.AverageLatencyMs:F0} ms\n{state.FailureReason}";
+        }
 
         private void OnEnable()
         {
@@ -226,13 +245,13 @@ namespace SysARchitect.UI
         private void UpdateCapacityText(float value)
         {
             if (capacityValueText != null)
-                capacityValueText.text = $"{value:F0} req/s";
+                capacityValueText.text = $"Capacity: {value:F0} req/s";
         }
 
         private void UpdateMemoryText(float value)
         {
             if (memoryValueText != null)
-                memoryValueText.text = $"{value:F0} MB";
+                memoryValueText.text = $"Memory limit: {value:F0} MB";
         }
 
         private static string FormatNodeType(NodeType type)

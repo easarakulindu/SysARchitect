@@ -10,6 +10,7 @@ namespace SysARchitect.Interaction
     /// Left-click a <see cref="NodeVisual"/> to select it; click empty
     /// space to deselect. Fires events for the UI layer to react.
     /// </summary>
+    [DefaultExecutionOrder(-100)]
     public class NodeSelectionController : MonoBehaviour
     {
         [SerializeField] private Camera mainCamera;

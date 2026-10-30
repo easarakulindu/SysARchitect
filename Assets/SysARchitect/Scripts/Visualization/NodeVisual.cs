@@ -110,6 +110,7 @@ namespace SysARchitect.Visualization
             if (m_Label != null && Camera.main != null)
                 m_Label.transform.rotation = Camera.main.transform.rotation;
             if (m_GraphNode != null) UpdateStatus(m_GraphNode.Status);
+            if (m_CurrentStatus == NodeStatus.Overloaded) m_IsDirty = true;
             if (!m_IsDirty) return;
             m_IsDirty = false;
             ApplyVisualState();
@@ -142,6 +143,12 @@ namespace SysARchitect.Visualization
                 ? NodeColorPalette.GetAccentColor(m_GraphNode.Type)
                 : NodeColorPalette.GetStatusColor(m_CurrentStatus);
             Color emission;
+            if (m_CurrentStatus == NodeStatus.Overloaded)
+                statusColor *= .7f + .3f * Mathf.Sin(Time.unscaledTime * 2f);
+            if (m_IsSelected) statusColor = Color.Lerp(statusColor, NodeColorPalette.Selected, .5f);
+            if (m_Label != null)
+                m_Label.text = m_CurrentStatus == NodeStatus.Healthy ? m_GraphNode.DisplayName
+                    : $"{m_GraphNode.DisplayName}\n{m_CurrentStatus}";
 
             if (m_IsSelected)
             {
@@ -169,7 +176,8 @@ namespace SysARchitect.Visualization
 
             m_Label = labelGo.AddComponent<TextMeshPro>();
             m_Label.text = text;
-            m_Label.fontSize = 2f;
+            m_Label.fontSize = .4f;
+            m_Label.textWrappingMode = TextWrappingModes.NoWrap;
             m_Label.raycastTarget = false;
             m_Label.alignment = TextAlignmentOptions.Center;
             m_Label.enableAutoSizing = false;
