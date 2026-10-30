@@ -92,10 +92,8 @@ namespace SysARchitect.Visualization
         /// <summary>Changes the text shown on the floating label.</summary>
         public void UpdateLabel(string text)
         {
-            if (m_Label != null)
-            {
-                m_Label.text = text;
-            }
+            m_IsDirty = true;
+            if (m_Label != null) m_Label.text = text;
         }
 
         /// <summary>Returns the underlying <see cref="GraphNode"/>.</summary>
@@ -147,8 +145,13 @@ namespace SysARchitect.Visualization
                 statusColor *= .7f + .3f * Mathf.Sin(Time.unscaledTime * 2f);
             if (m_IsSelected) statusColor = Color.Lerp(statusColor, NodeColorPalette.Selected, .5f);
             if (m_Label != null)
-                m_Label.text = m_CurrentStatus == NodeStatus.Healthy ? m_GraphNode.DisplayName
-                    : $"{m_GraphNode.DisplayName}\n{m_CurrentStatus}";
+            {
+                string name = m_GraphNode.DisplayName;
+                if (!m_IsSelected && name.Length > 22) name = name.Substring(0, 20) + "…";
+                if (m_GraphNode.Type == NodeType.LoadBalancer)
+                    name += m_GraphNode.RoutingRole == LoadBalancerRole.Database ? "\nDB Router" : "\nApp LB";
+                m_Label.text = m_CurrentStatus == NodeStatus.Healthy ? name : $"{name}\n{m_CurrentStatus}";
+            }
 
             if (m_IsSelected)
             {
@@ -176,7 +179,7 @@ namespace SysARchitect.Visualization
 
             m_Label = labelGo.AddComponent<TextMeshPro>();
             m_Label.text = text;
-            m_Label.fontSize = .4f;
+            m_Label.fontSize = .3f;
             m_Label.textWrappingMode = TextWrappingModes.NoWrap;
             m_Label.raycastTarget = false;
             m_Label.alignment = TextAlignmentOptions.Center;

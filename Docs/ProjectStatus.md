@@ -212,9 +212,8 @@ nodes or connection systems. The collider/enclosure expands and collapses with t
   modeled. A failed shard affects its keys. Whole-node failure/restart remains available
   in the regular inspector and stops internal replication while offline.
 - Reset clears records, counters, health and internal animations while retaining mode and
-  member count. Database capacity/memory are aggregate educational node settings, not
-  independently measured per-member resources; more members do not automatically multiply
-  capacity. Record versions and mode changes are an educational model, not a real DB engine.
+  member count. Database capacity was aggregate at this checkpoint; the routing correction below now
+  uses per-member service budgets with shared cluster memory/queue limits. Record versions and mode changes are an educational model, not a real DB engine.
 
 Quick exercise: place/select a Database, choose Replication, Write key 1, and Step twice.
 The primary has the key while replicas are pending. Step another ten ticks and Read to
@@ -222,7 +221,7 @@ observe the synchronized copy. Choose Sharding and write keys 1, 2 and 3 to see 
 partitions. Select member 1, fail it, and read key 1; observe a failed request without
 crashing unrelated nodes. Recover it and advance at least twenty ticks.
 
-Current validation: **38 Edit Mode cases and 11 Play Mode cases pass** in the isolated
+Database-checkpoint validation: **38 Edit Mode cases and 11 Play Mode cases passed** in the isolated
 Unity 6000.6.5f1 project. This includes the prior connection/resource tests plus database
 copy delay, mode migration, key distribution, outages, recovery, counters, explorer wiring,
 member/graph ownership, animations and collapse. Rendered replication and sharding views
@@ -253,3 +252,49 @@ closed intentionally by `timeout` (exit 124). Existing display-DPI and unused/st
 postprocessing warnings remain, as in the prior build. Player log:
 `/tmp/sysarchitect-database-linux-player.log`. Final source verification found no removed
 scene object IDs, no changed scene GUID, and no source scene changes during isolation.
+
+
+## Current architecture/UX corrections
+
+See `Docs/RoutingAndConnections.md` for supported patterns and the manual walkthrough.
+One configurable Load Balancer now supports application routing and database routing;
+Backend > Database Router > expandable cluster is supported without arbitrary role mixing.
+Database execution/versioning still lives in DatabaseModel. Replica/shard member service
+budgets and utilization now reflect routed read/write work; primary writes remain limited
+to one primary budget. Backend-controlled cache-aside has actual hit/miss/fallback/fill
+behavior, scoped keys, write invalidation and coherence tests.
+
+The existing selection controller now picks directed edges as well as nodes, with node
+priority, clear selected-edge styling, dedicated deletion controls and guarded keyboard
+shortcuts. Current graph changes update simulator routes immediately. Existing node deletion,
+packet cleanup, desktop camera controls and expandable database functionality are preserved.
+Default ingress/router/cache headroom makes backend scaling visible without silently
+increasing backend capacity. Label size/name abbreviation and dismissible inspectors improve
+clarity; full automatic label layout is not implemented.
+
+Validation artifacts: `/tmp/sysarchitect-routing-core.xml`, `/tmp/sysarchitect-routing-play.xml`,
+and rendered captures under `/tmp/sysarchitect-*routing*.png`,
+`/tmp/sysarchitect-selected-connection.png`, `/tmp/sysarchitect-cache-aside.png`.
+The simulator/validation foundation is committed as `3e8212d`; following commits record
+additional regression coverage and the integrated UI/scene. The latest Linux demo will be
+in `Builds/Linux-RoutingDemo/`, leaving previous demo folders intact. No unrelated milestone
+was advanced. `.agents` remains excluded; untracked `dotnet-tools.json` was untouched.
+
+Final correction suites: **50 Edit Mode and 16 Play Mode cases passed**. Both combined
+routing roles were exercised through the actual scene, including primary-only writes,
+replica reads, stale-read display, selected-edge controls and cache hit/miss/fill activity.
+All pre-existing scene object IDs and asset GUIDs were preserved; no unresolved scene GUIDs
+were found. Validation/build stayed in the isolated project while the user's editor remained
+open. Source and validated scene hashes match. Core follow-up commit: `a99c43b`.
+
+The final Linux build succeeded (108,700,945 bytes) and was copied to
+`Builds/Linux-RoutingDemo/SysARchitect.x86_64`; previous demo folders are preserved.
+A 12-second graphical startup smoke test found no application exceptions or AR background
+initialization error. The test instance was deliberately closed by timeout (exit 124).
+Existing host DPI and unused URP postprocessing shader warnings remain. Build/player logs
+are `/tmp/sysarchitect-routing-linux-build.log` and `/tmp/sysarchitect-routing-linux-player.log`.
+The live database reconfiguration regression is fixed in `bb1bb8b`; its before/after
+reproducer confirmed a write now lands on the correct new shard, and centralized policy
+checks reject forced replica writes or mismatched shard indices. Final suites: 50 Edit
+Mode + 16 Play Mode, all passing. The following UI/scene commit completes these corrections;
+no unrelated milestone was advanced and no remote push was made.

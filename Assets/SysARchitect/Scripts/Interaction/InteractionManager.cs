@@ -1,6 +1,9 @@
 namespace SysARchitect.Interaction
 {
     using UnityEngine;
+    using UnityEngine.EventSystems;
+    using UnityEngine.UI;
+    using TMPro;
     using SysARchitect.Core;
     using SysARchitect.Graph;
 
@@ -42,6 +45,7 @@ namespace SysARchitect.Interaction
 
         void LateUpdate()
         {
+            if (Input.GetKeyDown(KeyCode.Delete) || Input.GetKeyDown(KeyCode.Backspace)) HandleDeleteShortcut();
             if (Input.GetKeyDown(KeyCode.Escape) ||
                 (currentMode == Mode.Place && placementController != null && !placementController.IsPlacing) ||
                 (currentMode == Mode.Connect && connectionController != null && !connectionController.IsConnecting))
@@ -109,6 +113,23 @@ namespace SysARchitect.Interaction
             ReturnToSelectMode();
         }
 
+        public void OnDeleteConnectionButtonPressed()
+        {
+            var edge = selectionController.SelectedConnection;
+            if (edge == null) return;
+            selectionController.Deselect();
+            graph.RemoveConnection(edge);
+        }
+
+        public bool HandleDeleteShortcut()
+        {
+            if (currentMode != Mode.Select || selectionController.SelectedConnection == null) return false;
+            var focused = EventSystem.current != null ? EventSystem.current.currentSelectedGameObject : null;
+            if (focused != null && (focused.GetComponentInParent<TMP_InputField>() != null || focused.GetComponentInParent<InputField>() != null)) return false;
+            OnDeleteConnectionButtonPressed();
+            return true;
+        }
+
         /// <summary>Clear the workspace after cancelling transient interactions.</summary>
         public void OnClearButtonPressed()
         {
@@ -147,6 +168,7 @@ namespace SysARchitect.Interaction
 
         private void ApplyMode(Mode mode)
         {
+            if (mode != Mode.Select && selectionController != null) selectionController.Deselect();
             // Enable/disable controllers based on the active mode.
             if (selectionController != null)
                 selectionController.enabled = (mode == Mode.Select || mode == Mode.Delete);

@@ -74,9 +74,10 @@ namespace SysARchitect.UI
                 : "SINGLE DATABASE: one copy. Choose replication for copies or sharding for partitions.\n");
             text.Append($"Logical keys {model.LogicalRecordCount} | Reads {model.Reads} | Writes {model.Writes} | Pending copies {model.PendingUpdates}\n");
             foreach (var member in model.Members)
-                text.Append($"{model.MemberName(member.Index)}: {member.Status}, {member.Records.Count} keys, pending {model.PendingFor(member.Index)}   ");
-            text.Append($"\nSelected member: {model.MemberName(Member)}. Recovery takes 1 simulated second; Run or Step.\n{model.LastOperation}\n");
-            text.Append("Read/Write enqueue requests; Run or Step to process. Incoming traffic uses 25% writes over 32 keys.");
+                text.Append($"{member.Index}:{(member.Status == NodeStatus.Healthy ? "up" : member.Status.ToString())} keys {member.Records.Count}   ");
+            var selected = model.Members[Member];
+            text.Append($"\nSelected {model.MemberName(Member)}: {selected.Status}, CPU {selected.Cpu:P0}, memory {selected.MemoryMB:F1} MB, R/W {selected.Reads}/{selected.Writes}, pending {model.PendingFor(Member)}\n{model.LastOperation}\n");
+            text.Append("Capacity applies per member; replicas add reads, not primary write capacity. Run/Step also advances 1s recovery and 0.5s sync.");
             detailsText.text = text.ToString();
         }
     }

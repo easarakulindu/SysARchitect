@@ -47,6 +47,8 @@ namespace SysARchitect.UI
             if (currentNode == null || simulation == null) return;
             var state = simulation.Engine.FindNode(currentNode.NodeId);
             if (state == null) return;
+            if (currentNode.Type == NodeType.LoadBalancer)
+                nodeTypeText.text = currentNode.RoutingRole == LoadBalancerRole.Database ? "Database Router" : "Application Load Balancer";
             nodeStatusText.text = state.Status.ToString();
             nodeStatusText.color = NodeColorPalette.GetStatusColor(state.Status);
             if (resourceText != null)
@@ -246,7 +248,7 @@ namespace SysARchitect.UI
         private void UpdateCapacityText(float value)
         {
             if (capacityValueText != null)
-                capacityValueText.text = $"Capacity: {value:F0} req/s";
+                capacityValueText.text = $"{(currentNode != null && currentNode.Type == NodeType.Database ? "Capacity/member" : "Capacity")}: {value:F0} req/s";
         }
 
         private void UpdateMemoryText(float value)

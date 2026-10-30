@@ -36,7 +36,9 @@ namespace SysARchitect.Simulation
             graph.OnNodeRemoved += RemoveNode;
             graph.OnConnectionAdded += ConnectionChanged;
             graph.OnConnectionRemoved += ConnectionRemoved;
-            Engine.OnTransfer += QueueTransfer;
+            Engine.OnTransferPath += QueueTransfer;
+            Engine.OnCacheAccess += CacheAccess;
+            graph.OnNodeConfigured += ConfigureNode;
             Engine.OnRequestFinished += ShowOutcome;
             foreach (var node in graph.Nodes)
                 if (Engine.FindNode(node.NodeId) == null) AddNode(node);
@@ -54,7 +56,9 @@ namespace SysARchitect.Simulation
             graph.OnNodeRemoved -= RemoveNode;
             graph.OnConnectionAdded -= ConnectionChanged;
             graph.OnConnectionRemoved -= ConnectionRemoved;
-            Engine.OnTransfer -= QueueTransfer;
+            Engine.OnTransferPath -= QueueTransfer;
+            Engine.OnCacheAccess -= CacheAccess;
+            graph.OnNodeConfigured -= ConfigureNode;
             Engine.OnRequestFinished -= ShowOutcome;
             Pause();
         }
@@ -182,6 +186,7 @@ namespace SysARchitect.Simulation
 
         private static void CopyConfiguration(GraphNode node, SimulationNode state)
         {
+            state.RoutingRole = node.RoutingRole;
             state.Capacity = node.ProcessingCapacity;
             state.QueueCapacity = node.QueueCapacity;
             state.MemoryLimitMB = node.MemoryLimitMB;
@@ -200,14 +205,30 @@ namespace SysARchitect.Simulation
             }
         }
 
-        private void QueueTransfer(long requestId, string sourceId, string targetId)
+        private void QueueTransfer(long requestId, string sourceId, string targetId, RequestPathKind kind)
         {
             foreach (var edge in graph.Connections)
                 if (edge.Source.NodeId == sourceId && edge.Target.NodeId == targetId)
                 {
-                    pendingVisuals[edge] = new VisualTransfer { RequestId = requestId };
+                    Color color = PathColor(kind);
+                    edge.GetComponent<ConnectionRenderer>().ShowActivity(color, kind.ToString());
+                    pendingVisuals[edge] = new VisualTransfer { RequestId = requestId, Color = color };
                     return;
                 }
+        }
+
+        private void ConfigureNode(GraphNode node) => CopyConfiguration(node, Engine.FindNode(node.NodeId));
+
+        private static Color PathColor(RequestPathKind kind) => kind == RequestPathKind.CacheMiss ? new Color(1, .55f, .1f)
+            : kind == RequestPathKind.CacheFill ? new Color(.8f, .4f, 1)
+            : kind == RequestPathKind.CacheHit ? RequestPacketVisual.Success
+            : kind == RequestPathKind.DatabaseWrite ? new Color(1, .35f, .65f) : RequestPacketVisual.Pending;
+
+        private void CacheAccess(long requestId, string backend, string cache, bool hit)
+        {
+            foreach (var edge in graph.Connections)
+                if (edge.Source.NodeId == backend && edge.Target.NodeId == cache)
+                    edge.GetComponent<ConnectionRenderer>().ShowActivity(PathColor(hit ? RequestPathKind.CacheHit : RequestPathKind.CacheMiss), hit ? "Cache hit" : "Cache miss > Backend storage fallback");
         }
 
         private void ShowOutcome(long requestId, string nodeId, bool succeeded)

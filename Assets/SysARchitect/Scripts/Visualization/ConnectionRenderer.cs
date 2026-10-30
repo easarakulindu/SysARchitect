@@ -28,6 +28,20 @@ namespace SysARchitect.Visualization
         static readonly int k_MainTexId       = Shader.PropertyToID("_BaseMap");
 
         float m_UVOffset;
+        bool selected;
+        Color activityColor;
+        float activityUntil;
+        public bool IsSelected => selected;
+        public string LastActivity { get; private set; } = "No traffic yet";
+        public void SetSelected(bool value) { selected = value; ApplyStyle(); }
+        public void ShowActivity(Color color, string description)
+        { activityColor = color; activityUntil = Time.unscaledTime + .7f; LastActivity = description; ApplyStyle(); }
+        private void ApplyStyle()
+        {
+            if (m_LineRenderer == null) return;
+            m_LineRenderer.widthMultiplier = selected ? .026f : k_LineWidth;
+            m_LineMaterialInstance.color = selected ? new Color(1, .85f, .1f) : Time.unscaledTime < activityUntil ? activityColor : new Color(.15f, .7f, .95f);
+        }
 
         // ────────────────────────────────────────────────────────────────
         // Public API
@@ -50,8 +64,9 @@ namespace SysARchitect.Visualization
             m_LineRenderer = GetComponent<LineRenderer>();
             m_LineRenderer.useWorldSpace = true;
             m_LineRenderer.positionCount = 5;
-            m_LineRenderer.startWidth = k_LineWidth;
-            m_LineRenderer.endWidth = k_LineWidth;
+            m_LineRenderer.startWidth = 1;
+            m_LineRenderer.endWidth = 1;
+            m_LineRenderer.widthMultiplier = k_LineWidth;
             m_LineRenderer.numCapVertices = 2;
             m_LineRenderer.numCornerVertices = 2;
             m_LineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
@@ -104,6 +119,7 @@ namespace SysARchitect.Visualization
             if (m_SourceTransform == null || m_TargetTransform == null) return;
 
             UpdatePositions();
+            ApplyStyle();
             AnimateUV();
         }
 
@@ -127,7 +143,7 @@ namespace SysARchitect.Visualization
             m_LineRenderer.SetPosition(1, end);
             Vector3 direction = (end - start).normalized;
             Vector3 side = Vector3.Cross(direction, Vector3.up).normalized;
-            float size = Mathf.Min(.08f, Vector3.Distance(start, end) * .25f);
+            float size = Mathf.Min(selected ? .12f : .09f, Vector3.Distance(start, end) * .25f);
             m_LineRenderer.SetPosition(2, end - direction * size + side * size * .5f);
             m_LineRenderer.SetPosition(3, end);
             m_LineRenderer.SetPosition(4, end - direction * size - side * size * .5f);
