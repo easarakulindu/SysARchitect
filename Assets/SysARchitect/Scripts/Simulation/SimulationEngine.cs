@@ -26,6 +26,7 @@ namespace SysARchitect.Simulation
         public long Timeouts { get; internal set; }
         public double AverageLatencyMs => Completed == 0 ? 0 : TotalLatencyMs / Completed;
         public string FailureReason { get; internal set; }
+        public DatabaseModel Database { get; }
         internal double TotalLatencyMs, Credit, RecoveryAt;
         internal int RouteIndex, Arrivals, Processed, RejectedThisTick;
         internal readonly Queue<SimRequest> Waiting = new Queue<SimRequest>();
@@ -37,12 +38,15 @@ namespace SysARchitect.Simulation
             if (string.IsNullOrWhiteSpace(id)) throw new ArgumentException("Node id is required.", nameof(id));
             Id = id;
             Type = type;
+            if (type == NodeType.Database) Database = new DatabaseModel();
         }
     }
 
     internal sealed class SimRequest
     {
         internal long Id;
+        internal bool IsWrite;
+        internal int RecordKey;
         internal double CreatedAt, ArrivedAt, ReadyAt, Deadline;
         internal int Hops;
     }
@@ -79,6 +83,18 @@ namespace SysARchitect.Simulation
         public string LastFailureNodeId { get; private set; }
 
         public SimulationNode FindNode(string id) => byId.TryGetValue(id, out var node) ? node : null;
+
+        /// <summary>Explicit database exercises use the same queue, capacity, deadline and counters.</summary>
+        public long SubmitDatabaseRequest(string id, bool write, int key)
+        {
+            var node = FindNode(id);
+            if (node?.Database == null) throw new ArgumentException("Choose a Database node.");
+            ValidateConfig(node);
+            Generated++;
+            Arrive(node, new SimRequest { Id = Generated, IsWrite = write, RecordKey = key,
+                CreatedAt = Time, Deadline = Time + node.TimeoutMs / 1000 });
+            return Generated;
+        }
 
         public void AddNode(SimulationNode node)
         {
@@ -143,6 +159,7 @@ namespace SysARchitect.Simulation
                 node.Completed = node.Failed = node.Rejected = node.Timeouts = 0;
                 node.RouteIndex = node.Arrivals = node.Processed = node.RejectedThisTick = 0;
                 node.FailureReason = null;
+                node.Database?.Reset();
             }
         }
 
@@ -157,6 +174,7 @@ namespace SysARchitect.Simulation
                 node.Arrivals = node.Processed = node.RejectedThisTick = 0;
                 if (node.Status == NodeStatus.Recovering && Time + Epsilon >= node.RecoveryAt)
                     node.Status = NodeStatus.Healthy;
+                node.Database?.AdvanceTo(Time, IsAvailable(node));
             }
             GenerateTraffic();
             foreach (var node in nodes)
@@ -200,7 +218,8 @@ namespace SysARchitect.Simulation
                 {
                     if (node.Type != NodeType.Frontend || selected-- != 0) continue;
                     Generated++;
-                    Arrive(node, new SimRequest { Id = Generated, CreatedAt = Time, Deadline = Time + node.TimeoutMs / 1000 });
+                    Arrive(node, new SimRequest { Id = Generated, IsWrite = Generated % 4 == 0, RecordKey = (int)((Generated / 4) % 32),
+                        CreatedAt = Time, Deadline = Time + node.TimeoutMs / 1000 });
                     break;
                 }
             }
@@ -253,6 +272,11 @@ namespace SysARchitect.Simulation
 
         private void Route(SimulationNode source, SimRequest request)
         {
+            if (source.Database != null && !source.Database.Execute(request.IsWrite, request.RecordKey, out string error))
+            {
+                Fail(source, request, false, error);
+                return;
+            }
             if (++request.Hops > 32) { Fail(source, request, false, "Routing hop limit exceeded"); return; }
             if (source.Targets.Count == 0)
             {
