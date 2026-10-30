@@ -34,7 +34,10 @@ namespace SysARchitect.Tests
             for (int key = 0; key < 12; key++) model.Execute(true, key, out _);
             model.Configure(DatabaseMode.Replication, 1);
             model.AdvanceTo(.5);
+            var existingReplica = model.Members[1];
             model.Configure(DatabaseMode.Replication, 3);
+            Assert.That(model.Members[1], Is.SameAs(existingReplica));
+            Assert.That(existingReplica.Records.Count, Is.EqualTo(12), "Adding capacity must preserve existing synchronized copies.");
             model.AdvanceTo(1);
             Assert.That(model.Members.All(m => m.Records.Count == 12), Is.True);
             model.Configure(DatabaseMode.Sharding, 3);
@@ -94,6 +97,13 @@ namespace SysARchitect.Tests
             Assert.That(model.Execute(true, 43, out _), Is.False);
             Assert.That(model.Execute(false, 42, out _), Is.True);
             Assert.That(model.LastMemberIndex, Is.Not.Zero);
+            model.Configure(DatabaseMode.Replication, 3);
+            model.AdvanceTo(3);
+            Assert.That(model.Members[0].Status, Is.EqualTo(NodeStatus.Crashed));
+            Assert.That(model.Members[3].Records, Is.Empty, "A new replica cannot sync from an unavailable primary.");
+            model.RecoverMember(0);
+            model.AdvanceTo(4);
+            Assert.That(model.Members[3].Records[42], Is.EqualTo(100));
         }
 
         [Test]

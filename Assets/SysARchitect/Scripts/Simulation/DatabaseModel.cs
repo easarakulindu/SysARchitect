@@ -56,6 +56,25 @@ namespace SysARchitect.Simulation
             if (count < 1 || count > maximum) throw new ArgumentOutOfRangeException(nameof(count));
             int total = mode == DatabaseMode.Replication ? count + 1 : count;
             if (Mode == mode && members.Count == total) return;
+            if (Mode == DatabaseMode.Replication && mode == Mode)
+            {
+                // Scaling replication retains existing copies, counters and failure states.
+                while (members.Count < total)
+                {
+                    var member = new DatabaseMember { Index = members.Count };
+                    members.Add(member);
+                    ScheduleSnapshot(member);
+                }
+                if (members.Count > total)
+                {
+                    pending.RemoveAll(update => update.Member.Index >= total);
+                    members.RemoveRange(total, members.Count - total);
+                }
+                nextReader = 0;
+                if (LastMemberIndex >= total) LastMemberIndex = -1;
+                Revision++;
+                return;
+            }
             Mode = mode;
             members.Clear();
             pending.Clear();
@@ -166,6 +185,7 @@ namespace SysARchitect.Simulation
             {
                 var update = pending[i];
                 if (Clock + 1e-9 < update.Due) { i++; continue; }
+                if (Mode == DatabaseMode.Replication && members[0].Status != NodeStatus.Healthy) { i++; continue; }
                 if (update.Member.Status == NodeStatus.Healthy)
                 {
                     if (!update.Member.records.TryGetValue(update.Key, out long old) || old < update.Version)
