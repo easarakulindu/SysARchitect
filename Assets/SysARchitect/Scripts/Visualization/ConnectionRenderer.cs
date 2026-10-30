@@ -1,0 +1,112 @@
+namespace SysARchitect.Visualization
+{
+    using UnityEngine;
+    using SysARchitect.Graph;
+
+    /// <summary>
+    /// Renders a visual connection line between two graph nodes.
+    /// Uses a <see cref="LineRenderer"/> with animated UV offset to
+    /// simulate flowing data along the connection.
+    /// </summary>
+    [RequireComponent(typeof(LineRenderer))]
+    public class ConnectionRenderer : MonoBehaviour
+    {
+        // ── State ──────────────────────────────────────────────────────
+        LineRenderer m_LineRenderer;
+        GraphConnection m_Connection;
+        Transform m_SourceTransform;
+        Transform m_TargetTransform;
+        Material m_LineMaterialInstance;
+
+        /// <summary>UV scroll speed (units per second).</summary>
+        const float k_ScrollSpeed = 0.5f;
+
+        /// <summary>Line width in world units.</summary>
+        const float k_LineWidth = 0.008f;
+
+        static readonly int k_MainTexOffsetId = Shader.PropertyToID("_BaseMap_ST");
+        static readonly int k_MainTexId       = Shader.PropertyToID("_BaseMap");
+
+        float m_UVOffset;
+
+        // ────────────────────────────────────────────────────────────────
+        // Public API
+        // ────────────────────────────────────────────────────────────────
+
+        /// <summary>
+        /// Configures the connection line between <paramref name="source"/>
+        /// and <paramref name="target"/>.
+        /// </summary>
+        /// <param name="conn">The logical graph connection.</param>
+        /// <param name="source">Source node transform.</param>
+        /// <param name="target">Target node transform.</param>
+        /// <param name="lineMaterial">Base material for the line.</param>
+        public void Initialize(GraphConnection conn, Transform source, Transform target, Material lineMaterial)
+        {
+            m_Connection = conn;
+            m_SourceTransform = source;
+            m_TargetTransform = target;
+
+            m_LineRenderer = GetComponent<LineRenderer>();
+            m_LineRenderer.useWorldSpace = true;
+            m_LineRenderer.positionCount = 2;
+            m_LineRenderer.startWidth = k_LineWidth;
+            m_LineRenderer.endWidth = k_LineWidth;
+            m_LineRenderer.numCapVertices = 2;
+            m_LineRenderer.numCornerVertices = 2;
+            m_LineRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            m_LineRenderer.receiveShadows = false;
+            m_LineRenderer.sortingOrder = -1; // render behind nodes
+
+            // Per-instance material so UV animation doesn't affect other lines.
+            m_LineMaterialInstance = new Material(lineMaterial);
+            m_LineRenderer.material = m_LineMaterialInstance;
+
+            // Set initial positions.
+            UpdatePositions();
+        }
+
+        /// <summary>Returns the underlying <see cref="GraphConnection"/>.</summary>
+        public GraphConnection GetConnection() => m_Connection;
+
+        // ────────────────────────────────────────────────────────────────
+        // Unity lifecycle
+        // ────────────────────────────────────────────────────────────────
+
+        void LateUpdate()
+        {
+            if (m_SourceTransform == null || m_TargetTransform == null) return;
+
+            UpdatePositions();
+            AnimateUV();
+        }
+
+        void OnDestroy()
+        {
+            // Clean up the per-instance material.
+            if (m_LineMaterialInstance != null)
+            {
+                Destroy(m_LineMaterialInstance);
+            }
+        }
+
+        // ────────────────────────────────────────────────────────────────
+        // Internal helpers
+        // ────────────────────────────────────────────────────────────────
+
+        void UpdatePositions()
+        {
+            m_LineRenderer.SetPosition(0, m_SourceTransform.position);
+            m_LineRenderer.SetPosition(1, m_TargetTransform.position);
+        }
+
+        void AnimateUV()
+        {
+            m_UVOffset += k_ScrollSpeed * Time.deltaTime;
+            if (m_UVOffset > 1f) m_UVOffset -= 1f;
+
+            // Scroll the main texture offset along U to produce a flow effect.
+            m_LineMaterialInstance.mainTextureOffset = new Vector2(m_UVOffset, 0f);
+        }
+    }
+}
