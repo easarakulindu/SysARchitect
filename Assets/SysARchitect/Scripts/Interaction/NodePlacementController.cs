@@ -1,6 +1,7 @@
 namespace SysARchitect.Interaction
 {
     using UnityEngine;
+    using UnityEngine.EventSystems;
     using SysARchitect.Core;
     using SysARchitect.Graph;
     using SysARchitect.Visualization;
@@ -86,12 +87,15 @@ namespace SysARchitect.Interaction
                 {
                     Destroy(renderer.material);
                 }
+                Destroy(previewObject.GetComponent<MeshFilter>().sharedMesh);
                 Destroy(previewObject);
                 previewObject = null;
             }
 
             pendingNodeType = null;
         }
+
+        void OnDisable() => CancelPlacement();
 
         void Update()
         {
@@ -105,6 +109,11 @@ namespace SysARchitect.Interaction
             }
 
             // Raycast from mouse position onto the placement surface.
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
+            {
+                previewObject.SetActive(false);
+                return;
+            }
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit, 100f, placementSurface))
             {
@@ -113,12 +122,13 @@ namespace SysARchitect.Interaction
                     previewObject.SetActive(true);
                 }
 
-                previewObject.transform.position = hit.point;
+                previewObject.transform.position = hit.point + Vector3.up *
+                    previewObject.GetComponent<MeshFilter>().sharedMesh.bounds.extents.y;
 
                 // Finalise on left-click.
                 if (Input.GetMouseButtonDown(0))
                 {
-                    FinalizePlacement(hit.point);
+                    FinalizePlacement(previewObject.transform.position);
                 }
             }
             else

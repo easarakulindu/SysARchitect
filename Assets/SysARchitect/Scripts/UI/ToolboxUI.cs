@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using SysARchitect.Core;
 using SysARchitect.Interaction;
+using SysARchitect.Graph;
 
 namespace SysARchitect.UI
 {
@@ -21,8 +22,32 @@ namespace SysARchitect.UI
         [SerializeField] private Button connectButton;
         [SerializeField] private Button deleteButton;
         [SerializeField] private Button clearButton;
+        [SerializeField] private Button selectButton;
+        [SerializeField] private Button validateButton;
+        [SerializeField] private ArchitectureGraph graph;
+        [SerializeField] private ConnectionCreationController connectionController;
+        [SerializeField] private TextMeshProUGUI statusText;
+        private string feedback = "Place a Frontend and Backend, then connect them.";
 
         private Button[] nodeButtons;
+
+        private void OnEnable()
+        {
+            if (connectionController != null) connectionController.OnConnectionError += ShowFeedback;
+        }
+
+        private void OnDisable()
+        {
+            if (connectionController != null) connectionController.OnConnectionError -= ShowFeedback;
+        }
+
+        private void Update()
+        {
+            if (statusText != null)
+                statusText.text = $"{interactionManager.CurrentMode} | {feedback}";
+        }
+
+        private void ShowFeedback(string message) => feedback = message;
 
         private void Start()
         {
@@ -69,6 +94,12 @@ namespace SysARchitect.UI
 
         private void SetupActionButtons()
         {
+            if (selectButton != null) selectButton.onClick.AddListener(interactionManager.ReturnToSelectMode);
+            if (validateButton != null) validateButton.onClick.AddListener(() =>
+            {
+                var warnings = graph.ValidateGraph();
+                feedback = warnings.Count == 0 ? "Architecture validation passed." : string.Join("\n", warnings);
+            });
             if (connectButton != null)
                 connectButton.onClick.AddListener(OnConnectClicked);
 

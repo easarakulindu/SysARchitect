@@ -32,11 +32,20 @@ namespace SysARchitect.UI
         [SerializeField] private TextMeshProUGUI capacityValueText;
         [SerializeField] private Slider memorySlider;
         [SerializeField] private TextMeshProUGUI memoryValueText;
+        [SerializeField] private Button rotateButton;
+        [SerializeField] private Transform connectionContainer;
+        [SerializeField] private GameObject connectionButtonPrefab;
 
         private GraphNode currentNode;
 
         private void OnEnable()
         {
+            if (graph != null)
+            {
+                graph.OnConnectionAdded += OnConnectionsChanged;
+                graph.OnConnectionRemoved += OnConnectionsChanged;
+                graph.OnNodeRemoved += OnNodeRemoved;
+            }
             if (selectionController != null)
             {
                 selectionController.OnNodeSelected += OnNodeSelected;
@@ -46,6 +55,12 @@ namespace SysARchitect.UI
 
         private void OnDisable()
         {
+            if (graph != null)
+            {
+                graph.OnConnectionAdded -= OnConnectionsChanged;
+                graph.OnConnectionRemoved -= OnConnectionsChanged;
+                graph.OnNodeRemoved -= OnNodeRemoved;
+            }
             if (selectionController != null)
             {
                 selectionController.OnNodeSelected -= OnNodeSelected;
@@ -63,6 +78,10 @@ namespace SysARchitect.UI
 
         private void SetupInputListeners()
         {
+            if (rotateButton != null) rotateButton.onClick.AddListener(() =>
+            {
+                if (currentNode != null) currentNode.transform.Rotate(Vector3.up, 45f, Space.World);
+            });
             if (nameInputField != null)
             {
                 nameInputField.onEndEdit.AddListener(OnNameChanged);
@@ -93,6 +112,34 @@ namespace SysARchitect.UI
             if (inspectorPanel != null)
                 inspectorPanel.SetActive(true);
 
+            RefreshDisplay();
+            RefreshConnections();
+        }
+
+        private void OnNodeRemoved(GraphNode node)
+        {
+            if (node == currentNode) OnNodeDeselected();
+        }
+
+        private void OnConnectionsChanged(GraphConnection connection) => RefreshConnections();
+
+        private void RefreshConnections()
+        {
+            if (connectionContainer == null || connectionButtonPrefab == null) return;
+            foreach (Transform child in connectionContainer)
+            {
+                child.gameObject.SetActive(false);
+                Destroy(child.gameObject);
+            }
+            if (currentNode == null || graph == null) return;
+            foreach (var edge in graph.Connections)
+            {
+                if (edge.Source != currentNode && edge.Target != currentNode) continue;
+                var button = Instantiate(connectionButtonPrefab, connectionContainer).GetComponent<Button>();
+                button.GetComponentInChildren<TextMeshProUGUI>().text =
+                    $"Remove: {edge.Source.DisplayName} > {edge.Target.DisplayName}";
+                button.onClick.AddListener(() => graph.RemoveConnection(edge));
+            }
             RefreshDisplay();
         }
 

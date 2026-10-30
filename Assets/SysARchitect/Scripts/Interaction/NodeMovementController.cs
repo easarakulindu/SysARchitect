@@ -1,6 +1,7 @@
 namespace SysARchitect.Interaction
 {
     using UnityEngine;
+    using UnityEngine.EventSystems;
     using SysARchitect.Visualization;
 
     /// <summary>
@@ -38,6 +39,7 @@ namespace SysARchitect.Interaction
         private void TryBeginDrag()
         {
             if (!Input.GetMouseButtonDown(0)) return;
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
             // Only drag the currently selected node.
             NodeVisual selected = selectionController != null ? selectionController.SelectedNode : null;
@@ -54,12 +56,7 @@ namespace SysARchitect.Interaction
             if (hitVisual != selected) return;
 
             // Calculate offset between node position and surface hit point.
-            Vector3 surfacePoint = GetSurfacePoint();
-            if (surfacePoint == Vector3.zero && !IsOnSurface(surfacePoint))
-            {
-                // Fallback: use the node's current position.
-                surfacePoint = selected.transform.position;
-            }
+            if (!TryGetSurfacePoint(out Vector3 surfacePoint)) return;
 
             dragOffset = selected.transform.position - surfacePoint;
             dragTarget = selected;
@@ -69,7 +66,7 @@ namespace SysARchitect.Interaction
         private void HandleDrag()
         {
             // End drag on mouse release.
-            if (Input.GetMouseButtonUp(0))
+            if (!Input.GetMouseButton(0))
             {
                 isDragging = false;
                 dragTarget = null;
@@ -82,8 +79,7 @@ namespace SysARchitect.Interaction
                 return;
             }
 
-            Vector3 surfacePoint = GetSurfacePoint();
-            if (IsOnSurface(surfacePoint))
+            if (TryGetSurfacePoint(out Vector3 surfacePoint))
             {
                 Vector3 targetPos = surfacePoint + dragOffset;
                 // Smooth movement to avoid jitter.
@@ -99,28 +95,22 @@ namespace SysARchitect.Interaction
         /// Raycast from the mouse cursor onto the placement surface to get a
         /// world-space position.
         /// </summary>
-        private Vector3 GetSurfacePoint()
+        private bool TryGetSurfacePoint(out Vector3 point)
         {
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit, 100f, placementSurface))
             {
-                return hit.point;
+                point = hit.point;
+                return true;
             }
-
-            // Fallback: project onto y=0 plane.
-            var plane = new Plane(Vector3.up, Vector3.zero);
-            if (plane.Raycast(ray, out float enter))
-            {
-                return ray.GetPoint(enter);
-            }
-
-            return Vector3.zero;
+            point = default;
+            return false;
         }
 
-        private static bool IsOnSurface(Vector3 point)
+        private void OnDisable()
         {
-            // Simple validity check — a zero vector is our sentinel for "no hit".
-            return point.sqrMagnitude > 0.0001f || Mathf.Abs(point.y) > 0.0001f;
+            isDragging = false;
+            dragTarget = null;
         }
 
         private static int LayerToMask(int layer)

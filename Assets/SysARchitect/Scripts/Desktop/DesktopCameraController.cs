@@ -1,6 +1,7 @@
 namespace SysARchitect.Desktop
 {
     using UnityEngine;
+    using UnityEngine.EventSystems;
 
     /// <summary>
     /// Orbit/pan/zoom camera controller for the desktop workspace.
@@ -60,9 +61,12 @@ namespace SysARchitect.Desktop
 
         void LateUpdate()
         {
-            HandleOrbit();
-            HandlePan();
-            HandleZoom();
+            if (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject())
+            {
+                HandleOrbit();
+                HandlePan();
+                HandleZoom();
+            }
 
             // Smoothly interpolate towards target values.
             smoothYaw = Mathf.SmoothDamp(smoothYaw, yaw, ref yawVelocity, smoothTime);

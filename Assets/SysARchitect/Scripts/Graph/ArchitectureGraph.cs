@@ -89,12 +89,27 @@ namespace SysARchitect.Graph
             if (source == target)
                 return (false, "Cannot connect a node to itself.");
 
+            if (!nodes.Contains(source) || !nodes.Contains(target))
+                return (false, "Both nodes must belong to this workspace.");
+
             // Check for duplicate connection
             if (connections.Any(c => c.Source == source && c.Target == target))
                 return (false, "This connection already exists.");
 
+            if (CanReach(target, source, new HashSet<GraphNode>()))
+                return (false, "This connection creates a request-routing cycle.");
+
             // Check type-level rules
             return ConnectionRules.Validate(source.Type, target.Type);
+        }
+
+        private bool CanReach(GraphNode start, GraphNode destination, HashSet<GraphNode> visited)
+        {
+            if (start == destination) return true;
+            if (!visited.Add(start)) return false;
+            foreach (var edge in connections)
+                if (edge.Source == start && CanReach(edge.Target, destination, visited)) return true;
+            return false;
         }
 
         /// <summary>

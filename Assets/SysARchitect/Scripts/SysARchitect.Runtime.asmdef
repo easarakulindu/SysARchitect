@@ -1,0 +1,5 @@
+{
+    "name": "SysARchitect.Runtime",
+    "rootNamespace": "SysARchitect",
+    "references": ["Unity.TextMeshPro", "UnityEngine.UI"]
+}

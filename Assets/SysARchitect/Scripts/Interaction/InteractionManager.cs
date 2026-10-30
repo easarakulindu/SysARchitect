@@ -40,6 +40,14 @@ namespace SysARchitect.Interaction
             ApplyMode(currentMode);
         }
 
+        void LateUpdate()
+        {
+            if (Input.GetKeyDown(KeyCode.Escape) ||
+                (currentMode == Mode.Place && placementController != null && !placementController.IsPlacing) ||
+                (currentMode == Mode.Connect && connectionController != null && !connectionController.IsConnecting))
+                ReturnToSelectMode();
+        }
+
         /// <summary>
         /// Switch to the specified interaction mode, cancelling any active operation.
         /// </summary>

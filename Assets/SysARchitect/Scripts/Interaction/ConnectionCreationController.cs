@@ -1,6 +1,7 @@
 namespace SysARchitect.Interaction
 {
     using UnityEngine;
+    using UnityEngine.EventSystems;
     using SysARchitect.Graph;
     using SysARchitect.Visualization;
     using System;
@@ -76,6 +77,7 @@ namespace SysARchitect.Interaction
 
             // Handle left-click.
             if (!Input.GetMouseButtonDown(0)) return;
+            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
             // Check if we hit a node.
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
@@ -111,6 +113,8 @@ namespace SysARchitect.Interaction
             sourceNode = node;
             CreatePreviewLine();
         }
+
+        void OnDisable() => CancelConnection();
 
         private void TryCreateConnection(GraphNode target)
         {

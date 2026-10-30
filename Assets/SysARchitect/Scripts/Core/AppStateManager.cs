@@ -41,5 +41,10 @@ namespace SysARchitect.Core
             currentMode = mode;
             OnModeChanged?.Invoke(currentMode);
         }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
     }
 }
