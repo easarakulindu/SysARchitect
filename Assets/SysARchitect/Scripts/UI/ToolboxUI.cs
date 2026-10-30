@@ -4,6 +4,7 @@ using TMPro;
 using SysARchitect.Core;
 using SysARchitect.Interaction;
 using SysARchitect.Graph;
+using SysARchitect.Simulation;
 
 namespace SysARchitect.UI
 {
@@ -30,15 +31,27 @@ namespace SysARchitect.UI
         private string feedback = "Place a Frontend and Backend, then connect them.";
 
         private Button[] nodeButtons;
+        private SimulationController simulation;
 
         private void OnEnable()
         {
-            if (connectionController != null) connectionController.OnConnectionError += ShowFeedback;
+            simulation = graph != null ? graph.GetComponent<SimulationController>() : null;
+            if (simulation != null) simulation.OnMessage += ShowFeedback;
+            if (connectionController != null)
+            {
+                connectionController.OnConnectionError += ShowFeedback;
+                connectionController.OnConnectionPrompt += ShowFeedback;
+            }
         }
 
         private void OnDisable()
         {
-            if (connectionController != null) connectionController.OnConnectionError -= ShowFeedback;
+            if (simulation != null) simulation.OnMessage -= ShowFeedback;
+            if (connectionController != null)
+            {
+                connectionController.OnConnectionError -= ShowFeedback;
+                connectionController.OnConnectionPrompt -= ShowFeedback;
+            }
         }
 
         private void Update()

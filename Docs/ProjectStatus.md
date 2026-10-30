@@ -154,3 +154,34 @@ URP/volume assets were reversed to their recorded clean baseline, with a review 
 retained at `/tmp/sysarchitect-generated-asset-changes.patch`. The untracked
 `dotnet-tools.json` appeared during the session; its origin is not established, so it was
 left untouched and excluded from commits. `.agents` is ignored and has no tracked files.
+
+## Connection and request-flow investigation
+
+The user's manual run had placed nodes without using Connect. Reproduced exactly at
+134 fixed ticks (6.7 simulated seconds): **201 sent, 199 failed, 2 in flight, 0 succeeded**.
+There were zero edges and zero packet visuals. The failure reason was "No service route
+configured"; this is expected unrouted-frontend behavior, not overload or a frontend crash.
+Run/Step now explain missing routes, Connect prompts for source/target, highlights the
+source, explains invalid targets and confirms successful directed connections.
+
+Two independent connected-case regressions failed before repair:
+
+- The arrow tip was at the target's center, occluded by its mesh. Line/arrow ports now
+  sit outside enclosures; wider lines and larger arrowheads improve direction visibility.
+- A global first-two-transfers limit repeatedly sampled only Frontend > Load Balancer.
+  Round-robin sampling now covers actual active edges, with one pending sample per edge
+  and the existing 64-packet bound. Packets use the same visible ports as their line,
+  follow node movement, and disappear when their connection is removed.
+
+Packets receive logical request IDs and become green/red from engine completion events.
+Animation does not change counters or outcomes. Explicit Step advances presentation by
+one tick; Pause freezes it. Counters retain the invariant sent = succeeded + failed +
+queued/processing. Counts include earlier configurations until Reset.
+
+Validation uses `/tmp/SysARchitectValidation`, an isolated copy because the user has Unity
+open. Baseline results: `/tmp/sysarchitect-flow-baseline.xml` (one reproduction passes,
+two visual regressions fail). Repaired Play Mode suite: `/tmp/sysarchitect-flow-fixed.xml`
+(all 9 pass), including actual camera/raycast source-target picking, invalid-target retry,
+line geometry, every-hop sampling, packet position/removal/colors and existing lifecycle.
+Rendered output was inspected. Core/resource regressions use `/tmp/sysarchitect-flow-core.xml`.
+The next original incomplete milestone is database replication/sharding.

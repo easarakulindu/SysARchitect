@@ -32,6 +32,8 @@ namespace SysARchitect.Interaction
 
         /// <summary>Fired when a connection is successfully created.</summary>
         public event Action OnConnectionCreated;
+        public event Action<string> OnConnectionPrompt;
+        public GraphNode SourceNode => sourceNode;
 
         /// <summary>Whether connection mode is currently active.</summary>
         public bool IsConnecting => isConnecting;
@@ -41,9 +43,11 @@ namespace SysARchitect.Interaction
         /// </summary>
         public void BeginConnectionMode()
         {
+            CancelConnection();
             isConnecting = true;
             sourceNode = null;
             CleanupPreviewLine();
+            OnConnectionPrompt?.Invoke("Click a source node, then a target node. Placing nodes does not connect them.");
         }
 
         /// <summary>
@@ -51,6 +55,7 @@ namespace SysARchitect.Interaction
         /// </summary>
         public void CancelConnection()
         {
+            if (sourceNode != null) sourceNode.GetComponent<NodeVisual>().SetSelected(false);
             isConnecting = false;
             sourceNode = null;
             CleanupPreviewLine();
@@ -80,7 +85,21 @@ namespace SysARchitect.Interaction
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
             // Check if we hit a node.
-            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+            HandlePointerClick(Input.mousePosition);
+        }
+
+        /// <summary>The mouse and future touch adapters share the same screen-space picking path.</summary>
+        public void HandlePointerClick(Vector2 screenPosition)
+        {
+            if (!isConnecting) return;
+            var pointer = new PointerEventData(EventSystem.current) { position = screenPosition };
+            var hits = new System.Collections.Generic.List<RaycastResult>();
+            if (EventSystem.current != null)
+            {
+                EventSystem.current.RaycastAll(pointer, hits);
+                if (hits.Count > 0) return;
+            }
+            Ray ray = mainCamera.ScreenPointToRay(screenPosition);
             if (!Physics.Raycast(ray, out RaycastHit hit, 100f, nodeLayer)) return;
 
             var visual = hit.collider.GetComponentInParent<NodeVisual>();
@@ -100,7 +119,7 @@ namespace SysARchitect.Interaction
                 if (clickedNode == sourceNode)
                 {
                     // Clicked same node — cancel.
-                    CancelConnection();
+                    OnConnectionError?.Invoke("Choose a different target; a node cannot connect to itself.");
                     return;
                 }
 
@@ -111,7 +130,9 @@ namespace SysARchitect.Interaction
         private void SetSource(GraphNode node)
         {
             sourceNode = node;
+            sourceNode.GetComponent<NodeVisual>().SetSelected(true);
             CreatePreviewLine();
+            OnConnectionPrompt?.Invoke($"Source: {node.DisplayName}. Now click a target node.");
         }
 
         void OnDisable() => CancelConnection();
@@ -128,6 +149,7 @@ namespace SysARchitect.Interaction
             }
 
             graph.AddConnection(sourceNode, target);
+            OnConnectionPrompt?.Invoke($"Connected {sourceNode.DisplayName} > {target.DisplayName}. Choose Connect to add another link.");
             OnConnectionCreated?.Invoke();
 
             // Return to a clean connection state so the user can chain connections.

@@ -42,6 +42,7 @@ namespace SysARchitect.Simulation
 
     internal sealed class SimRequest
     {
+        internal long Id;
         internal double CreatedAt, ArrivedAt, ReadyAt, Deadline;
         internal int Hops;
     }
@@ -72,7 +73,10 @@ namespace SysARchitect.Simulation
         public long InFlight => Generated - Succeeded - Failed;
         public double AverageLatencyMs => Succeeded == 0 ? 0 : totalLatencyMs / Succeeded;
         private double totalLatencyMs;
-        public event Action<string, string> OnTransfer;
+        public event Action<long, string, string> OnTransfer;
+        public event Action<long, string, bool> OnRequestFinished;
+        public string LastFailureReason { get; private set; }
+        public string LastFailureNodeId { get; private set; }
 
         public SimulationNode FindNode(string id) => byId.TryGetValue(id, out var node) ? node : null;
 
@@ -126,6 +130,7 @@ namespace SysARchitect.Simulation
         {
             Time = arrivalCredit = totalLatencyMs = 0;
             Generated = Succeeded = Failed = TimedOut = 0;
+            LastFailureReason = LastFailureNodeId = null;
             entryIndex = 0;
             transfers.Clear();
             foreach (var node in nodes)
@@ -172,8 +177,8 @@ namespace SysARchitect.Simulation
             }
             foreach (var transfer in transfers)
             {
+                OnTransfer?.Invoke(transfer.request.Id, transfer.source.Id, transfer.target.Id);
                 Arrive(transfer.target, transfer.request);
-                OnTransfer?.Invoke(transfer.source.Id, transfer.target.Id);
             }
             transfers.Clear();
             foreach (var node in nodes) UpdateResources(node);
@@ -195,7 +200,7 @@ namespace SysARchitect.Simulation
                 {
                     if (node.Type != NodeType.Frontend || selected-- != 0) continue;
                     Generated++;
-                    Arrive(node, new SimRequest { CreatedAt = Time, Deadline = Time + node.TimeoutMs / 1000 });
+                    Arrive(node, new SimRequest { Id = Generated, CreatedAt = Time, Deadline = Time + node.TimeoutMs / 1000 });
                     break;
                 }
             }
@@ -257,6 +262,7 @@ namespace SysARchitect.Simulation
                 {
                     Succeeded++;
                     totalLatencyMs += (Time - request.CreatedAt) * 1000;
+                    OnRequestFinished?.Invoke(request.Id, source.Id, true);
                 }
                 return;
             }
@@ -295,8 +301,11 @@ namespace SysARchitect.Simulation
         {
             Failed++;
             node.Failed++;
+            LastFailureReason = reason;
+            LastFailureNodeId = node.Id;
             if (IsAvailable(node)) node.FailureReason = reason;
             if (timeout) { TimedOut++; node.Timeouts++; }
+            OnRequestFinished?.Invoke(request.Id, node.Id, false);
         }
 
         private void FailPending(SimulationNode node, string reason)

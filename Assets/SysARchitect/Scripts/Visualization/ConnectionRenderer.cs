@@ -22,7 +22,7 @@ namespace SysARchitect.Visualization
         const float k_ScrollSpeed = 0.5f;
 
         /// <summary>Line width in world units.</summary>
-        const float k_LineWidth = 0.008f;
+        const float k_LineWidth = 0.014f;
 
         static readonly int k_MainTexOffsetId = Shader.PropertyToID("_BaseMap_ST");
         static readonly int k_MainTexId       = Shader.PropertyToID("_BaseMap");
@@ -69,6 +69,32 @@ namespace SysARchitect.Visualization
         /// <summary>Returns the underlying <see cref="GraphConnection"/>.</summary>
         public GraphConnection GetConnection() => m_Connection;
 
+        /// <summary>Shared visible ports for both the line and its request packets.</summary>
+        public static void GetEndpoints(Transform source, Transform target, out Vector3 start, out Vector3 end)
+        {
+            Vector3 direction = (target.position - source.position).normalized;
+            start = Port(source, direction);
+            end = Port(target, -direction);
+            if (Vector3.Dot(end - start, direction) <= .02f)
+            {
+                // Overlapping enclosures use ports above the objects instead of an inverted line.
+                float height = Mathf.Max(source.GetComponent<Collider>().bounds.max.y, target.GetComponent<Collider>().bounds.max.y) + .08f;
+                start = new Vector3(source.position.x, height, source.position.z);
+                end = new Vector3(target.position.x, height, target.position.z);
+            }
+        }
+
+        private static Vector3 Port(Transform node, Vector3 direction)
+        {
+            Bounds bounds = node.GetComponent<Collider>().bounds;
+            float distance = float.PositiveInfinity;
+            for (int axis = 0; axis < 3; axis++)
+                if (Mathf.Abs(direction[axis]) > .00001f)
+                    distance = Mathf.Min(distance, bounds.extents[axis] / Mathf.Abs(direction[axis]));
+            if (float.IsInfinity(distance)) distance = 0;
+            return bounds.center + direction * (distance + .025f);
+        }
+
         // ────────────────────────────────────────────────────────────────
         // Unity lifecycle
         // ────────────────────────────────────────────────────────────────
@@ -96,14 +122,15 @@ namespace SysARchitect.Visualization
 
         void UpdatePositions()
         {
-            m_LineRenderer.SetPosition(0, m_SourceTransform.position);
-            m_LineRenderer.SetPosition(1, m_TargetTransform.position);
-            Vector3 direction = (m_TargetTransform.position - m_SourceTransform.position).normalized;
+            GetEndpoints(m_SourceTransform, m_TargetTransform, out Vector3 start, out Vector3 end);
+            m_LineRenderer.SetPosition(0, start);
+            m_LineRenderer.SetPosition(1, end);
+            Vector3 direction = (end - start).normalized;
             Vector3 side = Vector3.Cross(direction, Vector3.up).normalized;
-            float size = Mathf.Min(.055f, Vector3.Distance(m_SourceTransform.position, m_TargetTransform.position) * .2f);
-            m_LineRenderer.SetPosition(2, m_TargetTransform.position - direction * size + side * size * .5f);
-            m_LineRenderer.SetPosition(3, m_TargetTransform.position);
-            m_LineRenderer.SetPosition(4, m_TargetTransform.position - direction * size - side * size * .5f);
+            float size = Mathf.Min(.08f, Vector3.Distance(start, end) * .25f);
+            m_LineRenderer.SetPosition(2, end - direction * size + side * size * .5f);
+            m_LineRenderer.SetPosition(3, end);
+            m_LineRenderer.SetPosition(4, end - direction * size - side * size * .5f);
         }
 
         void AnimateUV()

@@ -17,7 +17,15 @@ namespace SysARchitect.Simulation
         [SerializeField] private Material packetMaterial;
         private Transform packetRoot;
         private double accumulator;
-        private int visualsThisTick;
+        private sealed class VisualTransfer
+        {
+            public long RequestId;
+            public Color Color = RequestPacketVisual.Pending;
+        }
+        private readonly Dictionary<GraphConnection, VisualTransfer> pendingVisuals = new Dictionary<GraphConnection, VisualTransfer>();
+        private int visualCursor;
+        private string shownFailure;
+        public event Action<string> OnMessage;
         private readonly List<string> targets = new List<string>();
         public SimulationEngine Engine { get; } = new SimulationEngine();
         public bool IsRunning { get; private set; }
@@ -27,8 +35,9 @@ namespace SysARchitect.Simulation
             graph.OnNodeAdded += AddNode;
             graph.OnNodeRemoved += RemoveNode;
             graph.OnConnectionAdded += ConnectionChanged;
-            graph.OnConnectionRemoved += ConnectionChanged;
-            Engine.OnTransfer += ShowTransfer;
+            graph.OnConnectionRemoved += ConnectionRemoved;
+            Engine.OnTransfer += QueueTransfer;
+            Engine.OnRequestFinished += ShowOutcome;
             foreach (var node in graph.Nodes)
                 if (Engine.FindNode(node.NodeId) == null) AddNode(node);
             SyncConnections();
@@ -44,8 +53,9 @@ namespace SysARchitect.Simulation
             graph.OnNodeAdded -= AddNode;
             graph.OnNodeRemoved -= RemoveNode;
             graph.OnConnectionAdded -= ConnectionChanged;
-            graph.OnConnectionRemoved -= ConnectionChanged;
-            Engine.OnTransfer -= ShowTransfer;
+            graph.OnConnectionRemoved -= ConnectionRemoved;
+            Engine.OnTransfer -= QueueTransfer;
+            Engine.OnRequestFinished -= ShowOutcome;
             Pause();
         }
 
@@ -64,6 +74,7 @@ namespace SysARchitect.Simulation
         public void Run()
         {
             interactionManager.ReturnToSelectMode();
+            ExplainArchitecture();
             IsRunning = true;
             appState.SetMode(AppMode.Simulate);
             PausePackets(false);
@@ -87,13 +98,19 @@ namespace SysARchitect.Simulation
         {
             Pause();
             appState.SetMode(AppMode.Simulate);
+            if (Engine.Time == 0) ExplainArchitecture();
             Tick();
+            if (packetRoot != null)
+                foreach (Transform child in packetRoot) child.GetComponent<RequestPacketVisual>().Advance((float)SimulationEngine.TickSeconds);
         }
 
         public void ResetSimulation()
         {
             Pause();
             Engine.Reset();
+            pendingVisuals.Clear();
+            visualCursor = 0;
+            shownFailure = null;
             if (packetRoot != null)
                 foreach (Transform packet in packetRoot) Destroy(packet.gameObject);
             PresentState();
@@ -116,8 +133,16 @@ namespace SysARchitect.Simulation
         private void Tick()
         {
             foreach (var node in graph.Nodes) CopyConfiguration(node, Engine.FindNode(node.NodeId));
-            visualsThisTick = 0;
             Engine.Step();
+            FlushVisuals();
+            string failure = Engine.LastFailureNodeId + ": " + Engine.LastFailureReason;
+            if (Engine.LastFailureReason != null && failure != shownFailure)
+            {
+                shownFailure = failure;
+                var failedNode = graph.FindNode(Engine.LastFailureNodeId);
+                OnMessage?.Invoke($"Last failure at {failedNode?.DisplayName}: {Engine.LastFailureReason}. " +
+                    (Engine.LastFailureReason == "No service route configured" ? "Choose Connect, then click a source and target node." : "Inspect the node, its routing, capacity and health."));
+            }
             PresentState();
         }
 
@@ -162,19 +187,70 @@ namespace SysARchitect.Simulation
             }
         }
 
-        private void ShowTransfer(string sourceId, string targetId)
+        private void QueueTransfer(long requestId, string sourceId, string targetId)
         {
-            // Sample visual traffic: never create one GameObject for every simulated request.
-            if (packetMaterial == null || packetRoot.childCount >= 64 || visualsThisTick++ >= 2) return;
-            var source = graph.FindNode(sourceId);
-            var target = graph.FindNode(targetId);
-            if (source == null || target == null) return;
-            var packet = RequestPacketVisual.Create(packetMaterial);
-            packet.transform.SetParent(packetRoot, true);
-            packet.IsPaused = !IsRunning;
-            var state = Engine.FindNode(targetId);
-            Color color = state.Status == NodeStatus.Crashed ? RequestPacketVisual.Failure : RequestPacketVisual.Pending;
-            packet.Launch(source.transform, target.transform, color, 1.5f, null);
+            foreach (var edge in graph.Connections)
+                if (edge.Source.NodeId == sourceId && edge.Target.NodeId == targetId)
+                {
+                    pendingVisuals[edge] = new VisualTransfer { RequestId = requestId };
+                    return;
+                }
+        }
+
+        private void ShowOutcome(long requestId, string nodeId, bool succeeded)
+        {
+            foreach (var transfer in pendingVisuals.Values)
+                if (transfer.RequestId == requestId)
+                    transfer.Color = succeeded ? RequestPacketVisual.Success : RequestPacketVisual.Failure;
+            if (packetRoot == null) return;
+            foreach (Transform child in packetRoot)
+            {
+                var packet = child.GetComponent<RequestPacketVisual>();
+                if (packet.RequestId == requestId) packet.SetOutcome(succeeded);
+            }
+        }
+
+        private void FlushVisuals()
+        {
+            if (packetMaterial == null || graph.Connections.Count == 0) return;
+            // Rotate across actual edges; one pending sample per edge bounds storage and
+            // prevents a busy frontend from starving downstream paths of packet visuals.
+            int inspected = 0, spawned = 0;
+            while (inspected++ < graph.Connections.Count && spawned < 2 && packetRoot.childCount < 64)
+            {
+                visualCursor %= graph.Connections.Count;
+                var edge = graph.Connections[visualCursor++];
+                if (!pendingVisuals.TryGetValue(edge, out var transfer)) continue;
+                pendingVisuals.Remove(edge);
+                var packet = RequestPacketVisual.Create(packetMaterial);
+                packet.transform.SetParent(packetRoot, true);
+                packet.IsPaused = !IsRunning;
+                packet.Launch(edge, transfer.RequestId, transfer.Color, 1.5f);
+                spawned++;
+            }
+        }
+
+        private void ConnectionRemoved(GraphConnection connection)
+        {
+            pendingVisuals.Remove(connection);
+            if (packetRoot != null)
+                foreach (Transform child in packetRoot)
+                    if (child.GetComponent<RequestPacketVisual>().Connection == connection)
+                    {
+                        child.gameObject.SetActive(false);
+                        Destroy(child.gameObject);
+                    }
+            SyncConnections();
+        }
+
+        private void ExplainArchitecture()
+        {
+            var warnings = graph.ValidateGraph();
+            string message = graph.Connections.Count == 0
+                ? "No connections: placing nodes alone does not create a request path. Choose Connect, click source, then target. Unrouted requests fail."
+                : $"{graph.Connections.Count} directed links. Packets: cyan pending, green succeeded, red failed. Counters persist until Reset.";
+            if (warnings.Count > 0) message += "\n" + warnings[0];
+            OnMessage?.Invoke(message);
         }
 
         private void PausePackets(bool paused)

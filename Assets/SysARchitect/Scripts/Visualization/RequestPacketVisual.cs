@@ -1,6 +1,7 @@
 namespace SysARchitect.Visualization
 {
     using UnityEngine;
+    using SysARchitect.Graph;
 
     /// <summary>
     /// Visual representation of a request packet that travels between nodes.
@@ -18,6 +19,20 @@ namespace SysARchitect.Visualization
         bool m_IsActive;
         MeshRenderer m_MeshRenderer;
         public bool IsPaused { get; set; }
+        public GraphConnection Connection { get; private set; }
+        public long RequestId { get; private set; }
+        public Color CurrentColor { get; private set; }
+
+        public void Launch(GraphConnection connection, long requestId, Color color, float speed)
+        {
+            Connection = connection;
+            RequestId = requestId;
+            Launch(connection.Source.transform, connection.Target.transform, color, speed, null);
+            ConnectionRenderer.GetEndpoints(m_Source, m_Target, out Vector3 start, out _);
+            transform.position = start;
+        }
+
+        public void SetOutcome(bool succeeded) => SetColor(succeeded ? Success : Failure);
 
         /// <summary>Small sphere radius used by the factory.</summary>
         const float k_Radius = 0.02f;
@@ -59,7 +74,12 @@ namespace SysARchitect.Visualization
 
             transform.position = from.position;
 
-            // Tint the packet.
+            SetColor(color);
+        }
+
+        private void SetColor(Color color)
+        {
+            CurrentColor = color;
             if (m_MeshRenderer != null)
             {
                 var block = new MaterialPropertyBlock();
@@ -103,6 +123,13 @@ namespace SysARchitect.Visualization
         void Update()
         {
             if (!m_IsActive || IsPaused) return;
+            Advance(Time.deltaTime);
+        }
+
+        /// <summary>Presentation time only. Moving a packet never advances simulation state.</summary>
+        public void Advance(float seconds)
+        {
+            if (!m_IsActive) return;
             if (m_Source == null || m_Target == null)
             {
                 // Source or target was destroyed mid-flight — clean up.
@@ -112,18 +139,20 @@ namespace SysARchitect.Visualization
             }
 
             // Compute normalised progress based on distance.
-            float distance = Vector3.Distance(m_Source.position, m_Target.position);
+            Vector3 start = m_Source.position, end = m_Target.position;
+            if (Connection != null) ConnectionRenderer.GetEndpoints(m_Source, m_Target, out start, out end);
+            float distance = Vector3.Distance(start, end);
             if (distance < 0.0001f)
             {
                 m_Progress = 1f;
             }
             else
             {
-                m_Progress += (m_Speed / distance) * Time.deltaTime;
+                m_Progress += (m_Speed / distance) * seconds;
             }
 
             m_Progress = Mathf.Clamp01(m_Progress);
-            transform.position = Vector3.Lerp(m_Source.position, m_Target.position, m_Progress);
+            transform.position = Vector3.Lerp(start, end, m_Progress);
 
             if (m_Progress >= 1f)
             {
