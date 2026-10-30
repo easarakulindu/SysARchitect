@@ -276,7 +276,8 @@ namespace SysARchitect.Simulation
         private void UpdateResources(SimulationNode node)
         {
             node.IncomingRate = node.Arrivals / TickSeconds;
-            node.Cpu = node.Capacity <= 0 ? 0 : Math.Min(1, node.Processed / (node.Capacity * TickSeconds));
+            double utilization = node.Capacity <= 0 ? 0 : Math.Min(1, node.Processed / (node.Capacity * TickSeconds));
+            node.Cpu += .2 * (utilization - node.Cpu);
             node.MemoryMB = 32 + node.Waiting.Count + node.Processing.Count;
             if (!IsAvailable(node)) { node.Cpu = 0; return; }
             if (node.MemoryMB > node.MemoryLimitMB)
@@ -285,7 +286,8 @@ namespace SysARchitect.Simulation
                 FailPending(node, "Memory exhaustion");
                 return;
             }
-            node.Status = node.QueueLength > 0 || node.RejectedThisTick > 0 ? NodeStatus.Overloaded
+            bool backlog = node.QueueLength > 0 && Time - node.Waiting.Peek().ArrivedAt + Epsilon >= TickSeconds;
+            node.Status = backlog || node.RejectedThisTick > 0 ? NodeStatus.Overloaded
                 : node.Cpu >= .8 ? NodeStatus.Warning : NodeStatus.Healthy;
         }
 

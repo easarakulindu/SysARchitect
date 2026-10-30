@@ -54,9 +54,20 @@ namespace SysARchitect.Tests
             var backend = engine.FindNode("backend0");
             Assert.That(backend.QueueLength, Is.GreaterThan(0));
             Assert.That(backend.Rejected, Is.GreaterThan(0));
-            Assert.That(backend.Cpu, Is.EqualTo(1));
+            Assert.That(backend.Cpu, Is.EqualTo(1).Within(.001));
             Assert.That(backend.Status, Is.EqualTo(NodeStatus.Overloaded));
             Assert.That(engine.FindNode("frontend").Status, Is.Not.EqualTo(NodeStatus.Crashed));
+        }
+
+        [Test]
+        public void FreshArrivalsBelowCapacityAreNotReportedAsOverload()
+        {
+            var engine = Architecture(2, true);
+            engine.RequestsPerSecond = 60;
+            Run(engine, 200);
+            Assert.That(engine.Nodes.All(n => n.Status != NodeStatus.Overloaded), Is.True);
+            Assert.That(engine.FindNode("backend0").Cpu, Is.InRange(.35, .65));
+            Assert.That(engine.Failed, Is.Zero);
         }
 
         [Test]
