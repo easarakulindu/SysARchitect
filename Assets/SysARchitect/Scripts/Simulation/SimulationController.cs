@@ -98,7 +98,7 @@ namespace SysARchitect.Simulation
         {
             Pause();
             appState.SetMode(AppMode.Simulate);
-            if (Engine.Time == 0) ExplainArchitecture();
+            if (Engine.Time == 0 && Engine.Generated == 0) ExplainArchitecture();
             Tick();
             if (packetRoot != null)
                 foreach (Transform child in packetRoot) child.GetComponent<RequestPacketVisual>().Advance((float)SimulationEngine.TickSeconds);
@@ -130,6 +130,13 @@ namespace SysARchitect.Simulation
             PresentState();
         }
 
+        public void SubmitDatabaseRequest(GraphNode node, bool write, int key)
+        {
+            if (node == null || node.Type != NodeType.Database) return;
+            Engine.SubmitDatabaseRequest(node.NodeId, write, key);
+            OnMessage?.Invoke($"{(write ? "Write" : "Read")} key {key} queued at {node.DisplayName}. Run or Step to process.");
+        }
+
         private void Tick()
         {
             foreach (var node in graph.Nodes) CopyConfiguration(node, Engine.FindNode(node.NodeId));
@@ -151,6 +158,12 @@ namespace SysARchitect.Simulation
             var state = new SimulationNode(node.NodeId, node.Type);
             CopyConfiguration(node, state);
             Engine.AddNode(state);
+            if (state.Database != null)
+            {
+                var visual = node.GetComponent<DatabaseClusterVisual>();
+                if (visual == null) visual = node.gameObject.AddComponent<DatabaseClusterVisual>();
+                visual.Initialize(node, state.Database);
+            }
         }
 
         private void RemoveNode(GraphNode node) => Engine.RemoveNode(node.NodeId);
@@ -246,7 +259,11 @@ namespace SysARchitect.Simulation
         private void ExplainArchitecture()
         {
             var warnings = graph.ValidateGraph();
-            string message = graph.Connections.Count == 0
+            bool frontend = false;
+            foreach (var node in graph.Nodes) frontend |= node.Type == NodeType.Frontend;
+            string message = !frontend
+                ? "No Frontend: automatic traffic is idle. Database Read/Write exercises use its queue directly; Run or Step to process them."
+                : graph.Connections.Count == 0
                 ? "No connections: placing nodes alone does not create a request path. Choose Connect, click source, then target. Unrouted requests fail."
                 : $"{graph.Connections.Count} directed links. Packets: cyan pending, green succeeded, red failed. Counters persist until Reset.";
             if (warnings.Count > 0) message += "\n" + warnings[0];

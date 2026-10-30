@@ -131,7 +131,7 @@ namespace SysARchitect.Tests
             Assert.That(simulation.Engine.Nodes, Is.Empty);
         }
 
-        private static void CaptureDemo()
+        internal static void CaptureDemo(string fileName = "sysarchitect-desktop-demo.png")
         {
             var camera = Camera.main;
             var canvas = GameObject.Find("Workspace UI").GetComponent<Canvas>();
@@ -147,7 +147,7 @@ namespace SysARchitect.Tests
             var texture = new Texture2D(1280, 800, TextureFormat.RGB24, false);
             texture.ReadPixels(new Rect(0, 0, 1280, 800), 0, 0);
             texture.Apply();
-            File.WriteAllBytes(Path.Combine(Path.GetTempPath(), "sysarchitect-desktop-demo.png"), texture.EncodeToPNG());
+            File.WriteAllBytes(Path.Combine(Path.GetTempPath(), fileName), texture.EncodeToPNG());
             RenderTexture.active = previous;
             camera.targetTexture = null;
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;

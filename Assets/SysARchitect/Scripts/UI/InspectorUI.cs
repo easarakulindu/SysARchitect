@@ -54,7 +54,8 @@ namespace SysARchitect.UI
                     $"Incoming {state.IncomingRate:F0}/s | Queue {state.QueueLength}\n" +
                     $"Processed {state.Completed} | Failed {state.Failed}\n" +
                     $"Rejected {state.Rejected} | Timeouts {state.Timeouts}\n" +
-                    $"Mean node latency {state.AverageLatencyMs:F0} ms\n{state.FailureReason}";
+                    $"Mean node latency {state.AverageLatencyMs:F0} ms\n" +
+                    (string.IsNullOrEmpty(state.FailureReason) ? "" : $"Last issue: {state.FailureReason}");
         }
 
         private void OnEnable()

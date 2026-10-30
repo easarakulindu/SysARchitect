@@ -53,7 +53,7 @@ Headless tests do not establish visual quality or real mouse usability.
 
 1. Builder foundation: implemented and automated lifecycle checks pass; manual visual/input QA pending.
 2. Simulation engine: implemented and wired to the desktop scene; see validation below.
-3. Database replication/sharding: absent.
+3. Database replication/sharding: implemented with an expandable explorer; see current verification below.
 4. Five lessons, Docker/Kubernetes controllers, 20-question quiz and progress: absent.
 5. Shared AR placement and Android deployment: template only; no device test performed.
 6. Visual/mobile polish, performance measurements and full demo validation: pending.
@@ -101,7 +101,7 @@ Suggested demonstration:
 
 The first graphical test exposed oversized world labels, incorrectly anchored button
 text, and inward-facing cylinder caps. These were repaired and visually rechecked.
-Automated coverage now includes 25 Edit Mode cases (17 simulation, 8 mesh winding) and
+Initial automated coverage included 25 Edit Mode cases (17 simulation, 8 mesh winding) and
 3 Play Mode cases (builder lifecycle, graph validation, integrated controls and packets).
 Test artifacts are in `/tmp/sysarchitect-simulation-tests.xml` and
 `/tmp/sysarchitect-integrated-tests.xml`; the rendered demo capture is
@@ -114,10 +114,9 @@ desktop workspace. Output: `Builds/Linux/SysARchitect.x86_64` (ignored by Git).
 
 ## Next priority before November 2
 
-Finish desktop mouse usability QA and save/load of learner architectures, then implement
-database replication/sharding against this same engine. Follow with the five guided
-lessons, Docker/Kubernetes behavior, quiz/progress, shared AR placement and Android
-validation. The complete product is not finished; no physical AR, Android build, or
+The next original milestone is the five guided lessons, Docker/Kubernetes behavior and
+quiz/progress. Desktop mouse usability QA and architecture save/load remain usability
+work. Shared AR placement and Android validation follow. The complete product is not finished; no physical AR, Android build, or
 mobile performance verification has been claimed.
 
 ## Build verification and local commits
@@ -185,3 +184,72 @@ two visual regressions fail). Repaired Play Mode suite: `/tmp/sysarchitect-flow-
 line geometry, every-hop sampling, packet position/removal/colors and existing lifecycle.
 Rendered output was inspected. Core/resource regressions use `/tmp/sysarchitect-flow-core.xml`.
 The next original incomplete milestone is database replication/sharding.
+
+## Database milestone: expandable explorer
+
+One Database toolbox entry now owns a `DatabaseModel` and expandable enclosure. Select a
+Database to open **Database Explorer**, then choose Replication (primary + two replicas),
+Add replica (up to four replicas), Sharding (one to eight partitions), or Single. Members
+are visual children of one selectable graph node; they do not create duplicate graph
+nodes or connection systems. The collider/enclosure expands and collapses with the view.
+
+- Replication writes to the primary and copies logical record versions after 0.5 simulated
+  seconds. Animated internal write packets, pending-copy counts and member status show
+  synchronization. Reads use healthy replicas, falling back to the primary when needed;
+  a lagging replica can return a stale version or not found, and the UI explains that.
+- Sharding routes keys by normalized `key % shardCount`, including negative integer keys.
+  Records live in exactly one shard. Changing shard count redistributes the retained
+  logical records; switching modes preserves them. The routed member is highlighted and
+  internal access packets show the chosen destination.
+- Read/Write queue explicit requests at the selected database. Run or Step processes them
+  through existing capacity, queues and deadlines, with the same global success/failure
+  counters and node resource monitoring. A successful query with no record is not a
+  transport failure. Automatic frontend traffic uses deterministic 25% writes over 32 keys.
+- The member slider selects the primary, replica or shard for Fail member / Recover member.
+  Recovery takes one simulated second. Recovered replicas catch up after the sync delay.
+  Offline replicas do not accumulate an unbounded update backlog. A failed primary rejects
+  writes while healthy replicas can still serve reads; automatic primary promotion is not
+  modeled. A failed shard affects its keys. Whole-node failure/restart remains available
+  in the regular inspector and stops internal replication while offline.
+- Reset clears records, counters, health and internal animations while retaining mode and
+  member count. Database capacity/memory are aggregate educational node settings, not
+  independently measured per-member resources; more members do not automatically multiply
+  capacity. Record versions and mode changes are an educational model, not a real DB engine.
+
+Quick exercise: place/select a Database, choose Replication, Write key 1, and Step twice.
+The primary has the key while replicas are pending. Step another ten ticks and Read to
+observe the synchronized copy. Choose Sharding and write keys 1, 2 and 3 to see separate
+partitions. Select member 1, fail it, and read key 1; observe a failed request without
+crashing unrelated nodes. Recover it and advance at least twenty ticks.
+
+Current validation: **38 Edit Mode cases and 11 Play Mode cases pass** in the isolated
+Unity 6000.6.5f1 project. This includes the prior connection/resource tests plus database
+copy delay, mode migration, key distribution, outages, recovery, counters, explorer wiring,
+member/graph ownership, animations and collapse. Rendered replication and sharding views
+were inspected: `/tmp/sysarchitect-database-replication.png` and
+`/tmp/sysarchitect-database-sharding.png`. Results: `/tmp/sysarchitect-database-core.xml`
+and `/tmp/sysarchitect-database-play.xml`. Physical mouse interaction and device AR are
+still separate manual checks; no Android/device success is claimed.
+
+The Unity-authored scene update preserved all pre-existing scene object IDs and the scene
+GUID. The source scene's hash was checked before applying it, with no concurrent disk
+changes found. The user's running editor was not stopped. New local commits include
+`960a0d6` (connection/flow repair), `751bc3e` (database model), `dbd867e` (late-node
+clock initialization), `a1c1421` (preserve copies and health when adding replicas), and the
+explorer integration commit recorded by `git log`. No pushes; `.agents` remains ignored and untracked, and
+unrelated `dotnet-tools.json` remains untouched.
+
+
+The updated Linux build is in **`Builds/Linux-DatabaseDemo/SysARchitect.x86_64`**, with
+its required sibling data/shared-library files. The previous `Builds/Linux` demo is
+preserved for comparison. Unity reports 108,666,673 build bytes. Both database screenshots
+are also copied into the new build folder. Build log:
+`/tmp/sysarchitect-database-linux-build.log`. If DesktopWorkspace is already open in
+Unity, reload the scene from disk to pick up the new explorer UI.
+
+The new Linux player also passed a 12-second graphical startup smoke test with no
+application exceptions or camera-background initialization error. The test instance was
+closed intentionally by `timeout` (exit 124). Existing display-DPI and unused/stripped URP
+postprocessing warnings remain, as in the prior build. Player log:
+`/tmp/sysarchitect-database-linux-player.log`. Final source verification found no removed
+scene object IDs, no changed scene GUID, and no source scene changes during isolation.

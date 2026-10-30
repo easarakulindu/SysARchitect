@@ -100,6 +100,7 @@ namespace SysARchitect.Visualization
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             go.name = "RequestPacket";
+            go.layer = 2; // Ignore Raycast immediately, including the collider's deferred destruction frame.
             go.transform.localScale = Vector3.one * (k_Radius * 2f);
 
             // Remove the default collider — packets are visual only.
