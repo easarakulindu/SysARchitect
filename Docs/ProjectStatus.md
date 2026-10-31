@@ -16,6 +16,13 @@ rebuilding any application systems. Android APK now exists; see
 No on-device AR or iOS deployment is claimed. The unrelated `dotnet-tools.json`
 remains untouched and untracked. G visual/mobile UI polish is the next milestone.
 
+**Usage-limit resume:** A–F are committed through `cceec60`. G's source/assets
+were recovered intact and remain separate work in progress. The next small feature,
+transparent workload enclosures, was checked in the actual Linux UI and repaired
+with a real material asset that retains its player shader variant. See
+[recovery, exact reproduction, test results and current build locations](Recovery2026-10-31.md).
+Do not mistake the current working-tree demo for a fully committed G milestone.
+
 **October 31 database-router correction:** the older `Linux-DatabaseDemo` was reproduced
 rejecting Backend > LB and having no routing-role controls. The newer routing build accepts
 the architecture after explicit role selection. Current delivery uses `./RunDesktopDemo.sh`

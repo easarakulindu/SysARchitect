@@ -23,6 +23,7 @@ namespace SysARchitect.Visualization
 
         // ── Visual state ───────────────────────────────────────────────
         bool m_IsSelected;
+        public bool IsSelected => m_IsSelected;
         NodeStatus m_CurrentStatus = NodeStatus.Healthy;
         bool m_IsDirty;
 
