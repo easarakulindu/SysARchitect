@@ -53,8 +53,10 @@ No depth sensor is required by this horizontal-plane application.
 ## MacBook and iPhone
 
 On the friend's **M3 MacBook Pro**, install the Apple Silicon build of this same
-Unity version with **iOS Build Support**. Unity and Xcode are not installed yet;
-the exact macOS and iPhone model/iOS still need checking.
+Unity version with **iOS Build Support**. Installation of Unity and Xcode on that
+Mac has not been verified; do not assume either is present. The exact macOS and
+iPhone model/iOS still need checking (`sw_vers` and `xcodebuild -version` on the
+Mac, and Settings > General > About on the phone). No Mac is connected here.
 ARKit 6.6.2 specifically requires **Xcode 26.0 or newer**; Unity's generic Xcode
 minimum is insufficient for this package. Xcode 26/26.0.1 requires macOS
 Sequoia **15.6** or supported Tahoe 26 versions. Newer Xcode releases have their
@@ -94,6 +96,16 @@ iOS settings use iOS 15 minimum, Metal, ARKit required and a meaningful camera
 permission string. Runtime ARKit chooses/validates world-tracking support.
 Linux has no iOS Build Support/Xcode and cannot build, sign or install this app
 on iPhone. Export and deployment remain **unverified until performed on the Mac**.
+
+## Release-candidate build configuration
+
+The current helpers stamp **0.11.0** for both platforms and restore the previous
+project bundle version after building. Set `SYSARCHITECT_BUILD_REVISION` to the
+verified source commit before launching Unity to include provenance in
+BUILD-INFO.txt; an unset value is explicitly recorded as `not recorded`. The
+mobile configurator retains the AR scene's existing Input System actions asset
+instead of assigning a new default asset on every build. The release-candidate
+outputs and actual checks are recorded in [MobileUIReleaseCandidate.md](MobileUIReleaseCandidate.md).
 
 ## Physical-device acceptance checks
 

@@ -61,7 +61,7 @@ namespace SysARchitect.Editor
                     if (legacy != null) UnityEngine.Object.DestroyImmediate(legacy);
                     var input = events.GetComponent<InputSystemUIInputModule>();
                     if (input == null) input = events.gameObject.AddComponent<InputSystemUIInputModule>();
-                    input.AssignDefaultActions();
+                    if (input.actionsAsset == null) input.AssignDefaultActions();
                 }
             EditorSceneManager.SaveScene(scene);
             // Batch mode can start with an untitled scene, which cannot be restored by path.
@@ -110,7 +110,7 @@ namespace SysARchitect.Editor
             {
                 // Android does not support Both. Desktop retains its legacy mouse input.
                 inputHandler.intValue = 1; settings.ApplyModifiedPropertiesWithoutUndo();
-                PlayerSettings.bundleVersion = "0.9.0";
+                PlayerSettings.bundleVersion = "0.11.0";
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
                 {
@@ -121,7 +121,7 @@ namespace SysARchitect.Editor
                     throw new InvalidOperationException(target + " build failed: " + report.summary.result);
                 string directory = target == BuildTarget.iOS ? path : Path.GetDirectoryName(path);
                 File.WriteAllText(Path.Combine(directory, "BUILD-INFO.txt"),
-                    $"SysARchitect {PlayerSettings.bundleVersion}\nUnity {Application.unityVersion}\nTarget {target}\nBuilt UTC {DateTime.UtcNow:O}\nScene {ARWorkspaceSetup.ScenePath}\nScene dependency hash {AssetDatabase.GetAssetDependencyHash(ARWorkspaceSetup.ScenePath)}\n");
+                    $"SysARchitect {PlayerSettings.bundleVersion}\nUnity {Application.unityVersion}\nTarget {target}\nSource revision {Environment.GetEnvironmentVariable("SYSARCHITECT_BUILD_REVISION") ?? "not recorded"}\nBuilt UTC {DateTime.UtcNow:O}\nScene {ARWorkspaceSetup.ScenePath}\nScene dependency hash {AssetDatabase.GetAssetDependencyHash(ARWorkspaceSetup.ScenePath)}\n");
                 Debug.Log($"Mobile build succeeded: {Path.GetFullPath(path)} ({report.summary.totalSize} bytes)");
             }
             finally

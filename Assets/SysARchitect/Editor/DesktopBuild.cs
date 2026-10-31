@@ -20,7 +20,7 @@ namespace SysARchitect.Editor
             string previousVersion = PlayerSettings.bundleVersion;
             try
             {
-                PlayerSettings.bundleVersion = "0.9.0-mobile-ready";
+                PlayerSettings.bundleVersion = "0.11.0";
                 // The template uses XR Simulation for AR previews. A desktop-only player
                 // must not start it or require simulation camera-background shaders.
                 if (xr != null) xr.InitManagerOnStart = false;
@@ -35,7 +35,7 @@ namespace SysARchitect.Editor
                     throw new InvalidOperationException("Desktop build failed: " + report.summary.result);
                 Debug.Log($"Desktop build succeeded: {Path.GetFullPath(path)} ({report.summary.totalSize} bytes)");
                 File.WriteAllText(Path.Combine(directory, "BUILD-INFO.txt"),
-                    $"SysARchitect {PlayerSettings.bundleVersion}\nUnity {Application.unityVersion}\nBuilt UTC {DateTime.UtcNow:O}\nScene {DesktopSceneSetup.ScenePath}\nScene dependency hash {AssetDatabase.GetAssetDependencyHash(DesktopSceneSetup.ScenePath)}\n");
+                    $"SysARchitect {PlayerSettings.bundleVersion}\nUnity {Application.unityVersion}\nSource revision {Environment.GetEnvironmentVariable("SYSARCHITECT_BUILD_REVISION") ?? "not recorded"}\nBuilt UTC {DateTime.UtcNow:O}\nScene {DesktopSceneSetup.ScenePath}\nScene dependency hash {AssetDatabase.GetAssetDependencyHash(DesktopSceneSetup.ScenePath)}\n");
             }
             finally
             {
