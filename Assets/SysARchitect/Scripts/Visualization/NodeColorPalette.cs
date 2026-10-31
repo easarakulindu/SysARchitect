@@ -72,6 +72,7 @@ namespace SysARchitect.Visualization
                 case NodeType.Container:      return Container;
                 case NodeType.KubernetesNode: return KubernetesNode;
                 case NodeType.KubernetesPod:  return KubernetesPod;
+                case NodeType.DockerHost: return new Color(.1f, .55f, .95f);
                 default:                      return Color.white;
             }
         }

@@ -38,6 +38,7 @@ namespace SysARchitect.Graph
                 case NodeType.Frontend:
                     if (targetType == NodeType.Backend ||
                         targetType == NodeType.LoadBalancer ||
+                        targetType == NodeType.DockerHost ||
                         targetType == NodeType.Cache)
                         return (true, null);
                     if (targetType == NodeType.Frontend)
@@ -51,6 +52,7 @@ namespace SysARchitect.Graph
                         targetType == NodeType.Cache ||
                         targetType == NodeType.Backend ||
                         targetType == NodeType.Container ||
+                        targetType == NodeType.DockerHost ||
                         targetType == NodeType.KubernetesPod)
                         return (true, null);
                     if (targetType == NodeType.Frontend)
@@ -59,6 +61,7 @@ namespace SysARchitect.Graph
 
                 case NodeType.LoadBalancer:
                     if (targetType == NodeType.Backend ||
+                        targetType == NodeType.DockerHost ||
                         targetType == NodeType.Container ||
                         targetType == NodeType.KubernetesPod)
                         return (true, null);
@@ -82,6 +85,10 @@ namespace SysARchitect.Graph
                     if (targetType == NodeType.Frontend)
                         return (false, "Containers serve backend workloads. The Frontend connects to them, not the other way around.");
                     return (false, $"Container cannot connect to {FormatTypeName(targetType)}.");
+
+                case NodeType.DockerHost:
+                    return targetType == NodeType.Container ? (true, null)
+                        : (false, "A Docker Host dispatches to its simulated Containers. Create a container from an image in the Docker panel.");
 
                 case NodeType.KubernetesNode:
                     if (targetType == NodeType.KubernetesPod)

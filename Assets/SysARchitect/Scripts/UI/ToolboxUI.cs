@@ -82,7 +82,8 @@ namespace SysARchitect.UI
                 NodeType.Cache,
                 NodeType.Container,
                 NodeType.KubernetesNode,
-                NodeType.KubernetesPod
+                NodeType.KubernetesPod,
+                NodeType.DockerHost
             };
 
             if (toolboxButtonPrefab != null && buttonContainer != null)
@@ -155,6 +156,7 @@ namespace SysARchitect.UI
             return type switch
             {
                 NodeType.LoadBalancer => "Load\nBalancer",
+                NodeType.DockerHost => "Docker Host",
                 NodeType.KubernetesNode => "K8s\nNode",
                 NodeType.KubernetesPod => "K8s\nPod",
                 _ => type.ToString()

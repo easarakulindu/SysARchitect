@@ -65,3 +65,49 @@ startup check passed with no application exception (intentional timeout exit 124
 Player log `/tmp/sysarchitect-ar-linux-player.log`. The original desktop scene
 hash remains unchanged. Native horizontal-plane/anchor/camera behavior and touch
 ergonomics still require compatible Android/iOS hardware. Next priority: B Docker.
+
+## B — Docker simulations
+
+The scrollable toolbox adds one Docker Host. Select it to open Docker Explorer,
+choose a reusable `web:v1`, `api:v1` or `worker:v1` image, and create up to eight
+container instances. These are actual existing Container graph nodes, with their
+own queues, processing/memory limits, resource counters and failure state. The
+read-only image descriptor is shared; instance state is separate. Images represent
+packaged applications; containers represent isolated processes sharing a host
+kernel, not separate virtual machines. No Docker daemon or shell commands run.
+
+Frontend > Docker Host > owned Containers routes real requests. A host skips
+unavailable instances and cannot dispatch to another host's containers. Its
+capacity is a shared throughput/dispatch budget, so extra instances cannot exceed
+that budget. Host memory includes contained instance memory. Each container still
+has an independent memory ceiling; host exhaustion can affect the whole group.
+The existing engine owns all request/resource processing; the new model only
+owns image/instance membership and issues stop/restart commands. Host outages
+make contained services unavailable and fail their in-flight work; their own
+state is retained. This is an educational resource model, not Linux cgroups.
+
+Docker Explorer provides create, start, stop, restart, crash, remove, expand/
+collapse, instance choice, CPU quota and memory-limit controls. Start/restart uses
+the engine's one-second recovery in simulation time. Run/Step is required.
+Expand shows actual contained nodes inside a holographic outline. They are
+selectable; their layout moves with the host. Removing a host also removes its
+owned graph nodes and edges, preventing orphaned simulator entries.
+
+Files: `Components/DockerHostModel.cs`, `DockerWorkspaceController.cs`,
+`UI/DockerUI.cs`, `Visualization/WorkloadEnclosure.cs`, `Editor/DockerSceneSetup.cs`,
+the shared graph/engine ownership rules, toolbox/type/palette additions, and both
+Unity-authored workspace extensions. Existing GameObject IDs/metas were preserved.
+
+Validation: **55 Edit Mode and 20 Play Mode cases passed**, including prior
+desktop/AR touch cases, reusable images with independent instances, stop/start/
+restart, shared host capacity, host RAM/exhaustion/conservation, foreign-container
+routing rejection, actual UI creation, picking inside the enclosure and recursive
+ownership cleanup. `/tmp/sysarchitect-docker-core.xml` and
+`/tmp/sysarchitect-docker-play.xml` contain results; same-basename `.log` files
+record execution. The inspected enclosure capture is `/tmp/sysarchitect-docker.png`.
+CPU display retains the existing capped 50 ms utilization average; low service
+budgets have visible quantization. Throughput uses exact service credits.
+The Docker Linux build passed as `0.5.0-docker` (108,745,229 bytes), log
+`/tmp/sysarchitect-docker-linux-build.log`. The current launcher uses that build;
+the previous A artifact is preserved in `Builds/Linux-ARFoundation`. Device AR
+and end-to-end physical touch remain unverified. Next priority: C Kubernetes.

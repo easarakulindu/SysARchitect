@@ -187,6 +187,7 @@ namespace SysARchitect.Simulation
         private static void CopyConfiguration(GraphNode node, SimulationNode state)
         {
             state.RoutingRole = node.RoutingRole;
+            state.HostingNodeId = node.HostNodeId;
             state.Capacity = node.ProcessingCapacity;
             state.QueueCapacity = node.QueueCapacity;
             state.MemoryLimitMB = node.MemoryLimitMB;

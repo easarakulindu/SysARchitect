@@ -30,7 +30,7 @@ namespace SysARchitect.Tests
             var manager = Object.FindFirstObjectByType<InteractionManager>();
             var selection = Object.FindFirstObjectByType<NodeSelectionController>();
             var toolbox = GameObject.Find("Workspace UI/Toolbox/Components");
-            Assert.That(toolbox.GetComponentsInChildren<Button>().Length, Is.EqualTo(8));
+            Assert.That(toolbox.GetComponentsInChildren<Button>().Length, Is.EqualTo(9));
             toolbox.GetComponentsInChildren<Button>()[0].onClick.Invoke();
             Assert.That(Object.FindFirstObjectByType<NodePlacementController>().IsPlacing, Is.True);
             manager.ReturnToSelectMode();

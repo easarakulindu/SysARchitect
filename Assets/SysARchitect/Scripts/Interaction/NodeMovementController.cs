@@ -15,7 +15,7 @@ namespace SysARchitect.Interaction
         public void MoveSelectedOnSurface(Vector3 point, Vector3 normal)
         {
             var visual = selectionController.SelectedNode;
-            if (visual == null) return;
+            if (visual == null || visual.GetGraphNode().HostNodeId != null) return;
             float height = visual.GetComponent<MeshFilter>().sharedMesh.bounds.extents.y * visual.transform.lossyScale.y;
             visual.transform.position = point + normal * height;
         }
@@ -53,6 +53,7 @@ namespace SysARchitect.Interaction
             // Only drag the currently selected node.
             NodeVisual selected = selectionController != null ? selectionController.SelectedNode : null;
             if (selected == null) return;
+            if (selected.GetGraphNode().HostNodeId != null) return; // Contained workloads move with their host enclosure.
 
             // Verify the click is actually on the selected node.
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);

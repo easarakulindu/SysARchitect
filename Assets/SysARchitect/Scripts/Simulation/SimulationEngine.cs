@@ -12,6 +12,7 @@ namespace SysARchitect.Simulation
         public NodeType Type { get; }
         public double Capacity = 100;
         public LoadBalancerRole RoutingRole;
+        public string HostingNodeId { get; internal set; }
         public long CacheBypasses { get; internal set; }
         public int QueueCapacity = 50;
         public double MemoryLimitMB = 512;
@@ -133,6 +134,7 @@ namespace SysARchitect.Simulation
             var node = FindNode(id);
             if (node == null) return;
             FailPending(node, "Component removed");
+            foreach (var child in nodes) if (child.HostingNodeId == id) FailPending(child, "Container host removed");
             byId.Remove(id);
             nodes.Remove(node);
             foreach (var other in nodes) other.Targets.Remove(id);
@@ -156,6 +158,18 @@ namespace SysARchitect.Simulation
             node.Status = NodeStatus.Crashed;
             node.Cache?.Clear();
             FailPending(node, "Injected failure");
+            foreach (var child in nodes)
+                if (child.HostingNodeId == id) FailPending(child, "Container host unavailable");
+        }
+
+        public void Stop(string id)
+        {
+            var node = FindNode(id);
+            if (node == null) return;
+            node.Status = NodeStatus.Offline;
+            node.Credit = 0;
+            FailPending(node, "Component stopped by learner");
+            foreach (var child in nodes) if (child.HostingNodeId == id) FailPending(child, "Container host stopped");
         }
 
         public void Restart(string id)
@@ -247,7 +261,13 @@ namespace SysARchitect.Simulation
                 Arrive(transfer.target, transfer.request);
             }
             transfers.Clear();
-            foreach (var node in nodes) UpdateResources(node);
+            foreach (var node in nodes) if (node.Type != NodeType.DockerHost) UpdateResources(node);
+            foreach (var node in nodes) if (node.Type == NodeType.DockerHost)
+            {
+                UpdateResources(node);
+                if (!IsAvailable(node)) foreach (var child in nodes)
+                    if (child.HostingNodeId == node.Id) FailPending(child, "Container host unavailable");
+            }
         }
 
         private void StartProcessing(SimulationNode node, SimRequest request)
@@ -391,7 +411,7 @@ namespace SysARchitect.Simulation
             }
             if (source.Targets.Count == 0)
             {
-                if (source.Type == NodeType.Frontend || source.Type == NodeType.LoadBalancer || source.Type == NodeType.KubernetesNode)
+                if (source.Type == NodeType.Frontend || source.Type == NodeType.LoadBalancer || source.Type == NodeType.KubernetesNode || source.Type == NodeType.DockerHost)
                     Fail(source, request, false, "No service route configured");
                 else Complete(source, request);
                 return;
@@ -401,7 +421,7 @@ namespace SysARchitect.Simulation
                 int index = source.RouteIndex % source.Targets.Count;
                 source.RouteIndex = (index + 1) % source.Targets.Count;
                 var target = FindNode(source.Targets[index]);
-                if (target == null || (source.Type == NodeType.LoadBalancer && !IsAvailable(target))) continue;
+                if (target == null || ((source.Type == NodeType.LoadBalancer || source.Type == NodeType.DockerHost || source.Type == NodeType.KubernetesNode) && !IsAvailable(target))) continue;
                 Send(source, target, request, source.Type == NodeType.LoadBalancer ? RequestPathKind.ApplicationRoute
                     : request.IsWrite ? RequestPathKind.DatabaseWrite : RequestPathKind.Request);
                 return;
@@ -454,6 +474,8 @@ namespace SysARchitect.Simulation
         private void Send(SimulationNode source, SimulationNode target, SimRequest request, RequestPathKind path)
         {
             if (target == null) { Fail(source, request, false, "Routing target was removed."); return; }
+            if (source.Type == NodeType.DockerHost && target.HostingNodeId != source.Id)
+            { Fail(source, request, false, "A Docker Host can route only to its own Containers."); return; }
             var validation = ConnectionRules.Validate(source.Type, target.Type, source.RoutingRole, target.RoutingRole);
             if (!validation.isValid) { Fail(source, request, false, validation.errorMessage); return; }
             request.Path = path;
@@ -475,6 +497,9 @@ namespace SysARchitect.Simulation
             double utilization = node.Capacity <= 0 ? 0 : Math.Min(1, node.Processed / (node.Capacity * TickSeconds));
             node.Cpu += .2 * (utilization - node.Cpu);
             node.MemoryMB = 32 + node.Waiting.Count + node.Processing.Count + (node.Cache?.Count ?? 0) * .125;
+            if (node.Type == NodeType.DockerHost)
+                foreach (var child in nodes)
+                    if (child.HostingNodeId == node.Id && child.Status != NodeStatus.Offline) node.MemoryMB += child.MemoryMB;
             if (node.Database != null)
             {
                 node.Database.EndTick(node.Capacity, TickSeconds);
@@ -517,8 +542,13 @@ namespace SysARchitect.Simulation
             node.Cpu = 0;
         }
 
-        private static bool IsAvailable(SimulationNode node) => node.Status != NodeStatus.Crashed &&
-            node.Status != NodeStatus.Offline && node.Status != NodeStatus.Recovering;
+        private bool IsAvailable(SimulationNode node)
+        {
+            if (node.Status == NodeStatus.Crashed || node.Status == NodeStatus.Offline || node.Status == NodeStatus.Recovering) return false;
+            if (node.HostingNodeId == null) return true;
+            var host = FindNode(node.HostingNodeId);
+            return host != null && host.Status != NodeStatus.Crashed && host.Status != NodeStatus.Offline && host.Status != NodeStatus.Recovering;
+        }
 
         private static void ValidateConfig(SimulationNode node)
         {

@@ -9,6 +9,8 @@ namespace SysARchitect.Graph
     /// </summary>
     public class GraphNode : MonoBehaviour
     {
+        /// <summary>Owned runtime workload; null for independently placed nodes.</summary>
+        public string HostNodeId { get; set; }
         [SerializeField] private string nodeId;
         [SerializeField] private NodeType type;
         [SerializeField] private string displayName;
@@ -118,6 +120,7 @@ namespace SysARchitect.Graph
                 NodeType.Container => $"Container {index}",
                 NodeType.KubernetesNode => $"K8s Node {index}",
                 NodeType.KubernetesPod => $"K8s Pod {index}",
+                NodeType.DockerHost => $"Docker Host {index}",
                 _ => $"Node {index}"
             };
         }

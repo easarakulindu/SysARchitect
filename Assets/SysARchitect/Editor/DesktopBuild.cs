@@ -20,7 +20,7 @@ namespace SysARchitect.Editor
             string previousVersion = PlayerSettings.bundleVersion;
             try
             {
-                PlayerSettings.bundleVersion = "0.4.0-ar-foundation";
+                PlayerSettings.bundleVersion = "0.5.0-docker";
                 // The template uses XR Simulation for AR previews. A desktop-only player
                 // must not start it or require simulation camera-background shaders.
                 if (xr != null) xr.InitManagerOnStart = false;

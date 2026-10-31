@@ -95,6 +95,8 @@ namespace SysARchitect.Graph
 
             if (!nodes.Contains(source) || !nodes.Contains(target))
                 return (false, "Both nodes must belong to this workspace.");
+            if (source.Type == NodeType.DockerHost && target.HostNodeId != source.NodeId)
+                return (false, "Create this host's Containers from an image in its Docker panel; a Container belongs to one host.");
 
             // Check for duplicate connection
             if (connections.Any(c => c.Source == source && c.Target == target))
@@ -199,6 +201,8 @@ namespace SysARchitect.Graph
             {
                 RemoveConnection(conn);
             }
+
+            foreach (var child in nodes.Where(n => n.HostNodeId == node.NodeId).ToList()) RemoveNode(child);
 
             nodes.Remove(node);
             OnNodeRemoved?.Invoke(node);
@@ -337,6 +341,9 @@ namespace SysARchitect.Graph
                     warnings.Add($"{lb.DisplayName} has only one target. Add more backends for load distribution.");
                 }
             }
+            foreach (var host in nodes.Where(n => n.Type == NodeType.DockerHost))
+                if (!connections.Any(c => c.Source == host))
+                    warnings.Add($"{host.DisplayName} has no Container route. Select the host and create a Container from an image in Docker Explorer.");
 
             return warnings;
         }

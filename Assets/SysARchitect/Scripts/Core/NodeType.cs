@@ -12,6 +12,7 @@ namespace SysARchitect.Core
         Cache,
         Container,
         KubernetesNode,
-        KubernetesPod
+        KubernetesPod,
+        DockerHost
     }
 }
