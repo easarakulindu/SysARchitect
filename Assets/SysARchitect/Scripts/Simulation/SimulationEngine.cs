@@ -261,8 +261,8 @@ namespace SysARchitect.Simulation
                 Arrive(transfer.target, transfer.request);
             }
             transfers.Clear();
-            foreach (var node in nodes) if (node.Type != NodeType.DockerHost) UpdateResources(node);
-            foreach (var node in nodes) if (node.Type == NodeType.DockerHost)
+            foreach (var node in nodes) if (node.Type != NodeType.DockerHost && node.Type != NodeType.KubernetesNode) UpdateResources(node);
+            foreach (var node in nodes) if (node.Type == NodeType.DockerHost || node.Type == NodeType.KubernetesNode)
             {
                 UpdateResources(node);
                 if (!IsAvailable(node)) foreach (var child in nodes)
@@ -411,7 +411,7 @@ namespace SysARchitect.Simulation
             }
             if (source.Targets.Count == 0)
             {
-                if (source.Type == NodeType.Frontend || source.Type == NodeType.LoadBalancer || source.Type == NodeType.KubernetesNode || source.Type == NodeType.DockerHost)
+                if (source.Type == NodeType.Frontend || source.Type == NodeType.LoadBalancer || source.Type == NodeType.KubernetesNode || source.Type == NodeType.DockerHost || source.Type == NodeType.KubernetesCluster)
                     Fail(source, request, false, "No service route configured");
                 else Complete(source, request);
                 return;
@@ -421,7 +421,7 @@ namespace SysARchitect.Simulation
                 int index = source.RouteIndex % source.Targets.Count;
                 source.RouteIndex = (index + 1) % source.Targets.Count;
                 var target = FindNode(source.Targets[index]);
-                if (target == null || ((source.Type == NodeType.LoadBalancer || source.Type == NodeType.DockerHost || source.Type == NodeType.KubernetesNode) && !IsAvailable(target))) continue;
+                if (target == null || ((source.Type == NodeType.LoadBalancer || source.Type == NodeType.DockerHost || source.Type == NodeType.KubernetesNode || source.Type == NodeType.KubernetesCluster) && !IsAvailable(target))) continue;
                 Send(source, target, request, source.Type == NodeType.LoadBalancer ? RequestPathKind.ApplicationRoute
                     : request.IsWrite ? RequestPathKind.DatabaseWrite : RequestPathKind.Request);
                 return;
@@ -476,6 +476,8 @@ namespace SysARchitect.Simulation
             if (target == null) { Fail(source, request, false, "Routing target was removed."); return; }
             if (source.Type == NodeType.DockerHost && target.HostingNodeId != source.Id)
             { Fail(source, request, false, "A Docker Host can route only to its own Containers."); return; }
+            if ((source.Type == NodeType.KubernetesCluster || (source.Type == NodeType.KubernetesNode && source.HostingNodeId != null)) && target.HostingNodeId != source.Id)
+            { Fail(source, request, false, "Managed Kubernetes requests must use owned worker/pod routes."); return; }
             var validation = ConnectionRules.Validate(source.Type, target.Type, source.RoutingRole, target.RoutingRole);
             if (!validation.isValid) { Fail(source, request, false, validation.errorMessage); return; }
             request.Path = path;
@@ -497,7 +499,7 @@ namespace SysARchitect.Simulation
             double utilization = node.Capacity <= 0 ? 0 : Math.Min(1, node.Processed / (node.Capacity * TickSeconds));
             node.Cpu += .2 * (utilization - node.Cpu);
             node.MemoryMB = 32 + node.Waiting.Count + node.Processing.Count + (node.Cache?.Count ?? 0) * .125;
-            if (node.Type == NodeType.DockerHost)
+            if (node.Type == NodeType.DockerHost || node.Type == NodeType.KubernetesNode)
                 foreach (var child in nodes)
                     if (child.HostingNodeId == node.Id && child.Status != NodeStatus.Offline) node.MemoryMB += child.MemoryMB;
             if (node.Database != null)

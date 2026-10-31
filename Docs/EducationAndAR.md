@@ -111,3 +111,55 @@ The Docker Linux build passed as `0.5.0-docker` (108,745,229 bytes), log
 `/tmp/sysarchitect-docker-linux-build.log`. The current launcher uses that build;
 the previous A artifact is preserved in `Builds/Linux-ARFoundation`. Device AR
 and end-to-end physical touch remain unverified. Next priority: C Kubernetes.
+
+## C — Kubernetes deployments and recovery
+
+The toolbox adds a Kubernetes Cluster grouping a Service gateway and Deployment
+control. Select it, add up to four real Worker graph nodes, choose an explicit
+desired replica target (0–8), and Run/Step. A deterministic 0.5-second controller
+reconciliation creates actual Pod graph nodes on healthy workers, using four
+educational slots per worker. New Pods take one simulated second to be ready.
+The panel distinguishes desired, actual and ready counts. Lack of worker capacity
+leaves a visible pending explanation; it does not fabricate processing capacity.
+
+Fail Pod represents terminal Pod failure. The controller removes that identity
+and creates a new Pod UID to restore the same target. Changing desired replicas
+is explicit horizontal scaling; it has separate counters. **HPA is not configured**
+and high traffic alone never changes the target. Container restart policies,
+production scheduler constraints and real kubelet/API interactions are outside
+this bounded educational model. Deleting a managed Pod also triggers replacement
+on the next reconciliation; deleting the cluster removes its owned hierarchy
+without recreating it. Reset clears controller observation counters, retaining
+the explicit configuration and existing graph identities.
+
+The expanded hierarchy reuses WorkloadEnclosure and actual selectable graph
+members. Frontend > Cluster Service > healthy Worker > ready Pod follows the
+existing engine's queues, capacities, resource metrics and packet events. Arrows
+abstract service/worker dispatch: application requests do not traverse the API
+server, Deployment controller or scheduler. Worker CPU budgets bound their Pods,
+and worker memory includes Pod usage. Managed routes cannot target foreign nodes.
+
+Files: `Components/DeploymentModel.cs`, `KubernetesWorkspaceController.cs`,
+`UI/KubernetesUI.cs`, `Editor/KubernetesSceneSetup.cs`, core type/ownership rules,
+tick/reset events, nested enclosures, both scene extensions and regression tests.
+
+Technical references checked against primary documentation:
+[Kubernetes workload controllers](https://kubernetes.io/docs/concepts/workloads/controllers/),
+[replica replacement](https://kubernetes.io/docs/concepts/architecture/self-healing/),
+[explicit horizontal scaling](https://kubernetes.io/docs/tasks/run-application/scale-deployment/),
+[HPA configuration](https://kubernetes.io/docs/reference/kubernetes-api/autoscaling/horizontal-pod-autoscaler-v2/),
+[Docker images](https://docs.docker.com/get-started/docker-overview/), and
+[container isolation/shared kernel](https://docs.docker.com/get-started/docker-concepts/the-basics/what-is-a-container/).
+
+Validation: **59 Edit Mode and 21 Play Mode cases passed**. These cover new
+identity replacement without changing desired count, explicit scale-up/down,
+absence of implicit HPA, pending worker slots, readiness delay/reset, UI controls,
+real multi-hop traffic, and hierarchy deletion without resurrection. Results:
+`/tmp/sysarchitect-kubernetes-core.xml` and `/tmp/sysarchitect-kubernetes-play.xml`;
+the same-basename logs record execution. The inspected rendering is
+`/tmp/sysarchitect-kubernetes.png`. A Linux build succeeded as
+`0.6.0-kubernetes` (108,771,597 bytes), log
+`/tmp/sysarchitect-kubernetes-linux-build.log`. The prior Docker artifact is in
+`Builds/Linux-Docker`; the stable launcher remains `Builds/Linux-Current`.
+Remaining scope limits: bounded scheduler/readiness abstraction, no actual
+Kubernetes cluster or HPA. Next priority: D guided lessons.

@@ -121,6 +121,7 @@ namespace SysARchitect.Graph
                 NodeType.KubernetesNode => $"K8s Node {index}",
                 NodeType.KubernetesPod => $"K8s Pod {index}",
                 NodeType.DockerHost => $"Docker Host {index}",
+                NodeType.KubernetesCluster => $"K8s Cluster {index}",
                 _ => $"Node {index}"
             };
         }

@@ -83,7 +83,8 @@ namespace SysARchitect.UI
                 NodeType.Container,
                 NodeType.KubernetesNode,
                 NodeType.KubernetesPod,
-                NodeType.DockerHost
+                NodeType.DockerHost,
+                NodeType.KubernetesCluster
             };
 
             if (toolboxButtonPrefab != null && buttonContainer != null)
@@ -131,6 +132,10 @@ namespace SysARchitect.UI
                 interactionManager.OnToolboxNodeSelected(type);
             if (type == NodeType.LoadBalancer)
                 feedback = "Place the Load Balancer, then Select / Move and click it to choose Application Routing or Database Routing in ROUTING / CACHE.";
+            if (type == NodeType.DockerHost)
+                feedback = "Place a Docker Host, then Select / Move and click it. Create image instances in Docker Explorer; scroll the toolbox to see all components.";
+            if (type == NodeType.KubernetesCluster)
+                feedback = "Place a K8s Cluster, then select it, add Worker Nodes, choose desired replicas, and Run/Step to reconcile. HPA is not configured.";
         }
 
         private void OnConnectClicked()
@@ -157,6 +162,7 @@ namespace SysARchitect.UI
             {
                 NodeType.LoadBalancer => "Load\nBalancer",
                 NodeType.DockerHost => "Docker Host",
+                NodeType.KubernetesCluster => "K8s Cluster",
                 NodeType.KubernetesNode => "K8s\nNode",
                 NodeType.KubernetesPod => "K8s\nPod",
                 _ => type.ToString()

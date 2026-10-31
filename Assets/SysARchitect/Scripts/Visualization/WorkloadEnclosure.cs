@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using SysARchitect.Graph;
+using SysARchitect.Core;
 
 namespace SysARchitect.Visualization
 {
@@ -20,8 +21,10 @@ namespace SysARchitect.Visualization
             outline = go.AddComponent<LineRenderer>(); outline.useWorldSpace = false;
             outline.sharedMaterial = node.GetComponent<Renderer>().sharedMaterial; outline.widthMultiplier = .006f * transform.lossyScale.x;
             outline.positionCount = 16;
-            var a = new Vector3(-.62f, -.12f, -.32f); var b = new Vector3(.62f, -.12f, -.32f);
-            var c = new Vector3(.62f, -.12f, .32f); var d = new Vector3(-.62f, -.12f, .32f);
+            float x = owner.Type == NodeType.KubernetesCluster ? .78f : .62f;
+            float z = owner.Type == NodeType.KubernetesCluster ? .5f : .32f;
+            var a = new Vector3(-x, -.12f, -z); var b = new Vector3(x, -.12f, -z);
+            var c = new Vector3(x, -.12f, z); var d = new Vector3(-x, -.12f, z);
             var e = a + Vector3.up * .4f; var f = b + Vector3.up * .4f; var g = c + Vector3.up * .4f; var h = d + Vector3.up * .4f;
             outline.SetPositions(new[] { a, b, c, d, a, e, f, b, f, g, c, g, h, d, h, e });
             Refresh();
@@ -34,13 +37,15 @@ namespace SysARchitect.Visualization
             if (owner == null) return;
             owner.GetComponent<MeshRenderer>().enabled = !Expanded || members.Count == 0;
             outline.enabled = Expanded && members.Count > 0;
-            owner.GetComponent<BoxCollider>().size = Expanded && members.Count > 0 ? new Vector3(1.24f, .025f, .64f) : originalSize;
+            bool cluster = owner.Type == NodeType.KubernetesCluster;
+            owner.GetComponent<BoxCollider>().size = Expanded && members.Count > 0 ? new Vector3(cluster ? 1.56f : 1.24f, .025f, cluster ? 1 : .64f) : originalSize;
             owner.GetComponent<BoxCollider>().center = Expanded && members.Count > 0 ? new Vector3(0, -.14f, 0) : originalCenter;
             for (int i = 0; i < members.Count; i++)
             {
                 members[i].gameObject.SetActive(Expanded);
-                members[i].transform.localPosition = new Vector3((i % 4 - 1.5f) * .29f, .02f, (i / 4 - .5f) * .3f);
-                members[i].transform.localScale = Vector3.one * .55f;
+                members[i].transform.localPosition = cluster ? new Vector3((i % 2 - .5f) * .75f, .02f, (i / 2 - .5f) * .48f)
+                    : new Vector3((i % 4 - 1.5f) * .29f, .02f, (i / 4 - .5f) * .3f);
+                members[i].transform.localScale = Vector3.one * (cluster ? .5f : .55f);
             }
         }
     }

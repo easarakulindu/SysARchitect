@@ -26,6 +26,8 @@ namespace SysARchitect.Simulation
         private int visualCursor;
         private string shownFailure;
         public event Action<string> OnMessage;
+        public event Action<double> OnBeforeTick;
+        public event Action OnSimulationReset;
         private readonly List<string> targets = new List<string>();
         public SimulationEngine Engine { get; } = new SimulationEngine();
         public bool IsRunning { get; private set; }
@@ -112,6 +114,7 @@ namespace SysARchitect.Simulation
         {
             Pause();
             Engine.Reset();
+            OnSimulationReset?.Invoke();
             pendingVisuals.Clear();
             visualCursor = 0;
             shownFailure = null;
@@ -143,6 +146,7 @@ namespace SysARchitect.Simulation
 
         private void Tick()
         {
+            OnBeforeTick?.Invoke(Engine.Time);
             foreach (var node in graph.Nodes) CopyConfiguration(node, Engine.FindNode(node.NodeId));
             Engine.Step();
             FlushVisuals();

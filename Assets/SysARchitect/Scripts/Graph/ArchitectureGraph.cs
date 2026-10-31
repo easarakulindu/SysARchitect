@@ -67,7 +67,7 @@ namespace SysARchitect.Graph
             graphNode.NodeId = nodeId;
             graphNode.Type = type;
             // Default cheap ingress/router/cache services leave room to demonstrate backend scaling.
-            graphNode.ProcessingCapacity = type == NodeType.Frontend || type == NodeType.LoadBalancer || type == NodeType.Cache ? 1000
+            graphNode.ProcessingCapacity = type == NodeType.Frontend || type == NodeType.LoadBalancer || type == NodeType.Cache || type == NodeType.KubernetesCluster ? 1000
                 : type == NodeType.Database ? 500 : 100;
             graphNode.DisplayName = displayName;
 
@@ -97,6 +97,8 @@ namespace SysARchitect.Graph
                 return (false, "Both nodes must belong to this workspace.");
             if (source.Type == NodeType.DockerHost && target.HostNodeId != source.NodeId)
                 return (false, "Create this host's Containers from an image in its Docker panel; a Container belongs to one host.");
+            if ((source.Type == NodeType.KubernetesCluster || (source.Type == NodeType.KubernetesNode && source.HostNodeId != null)) && target.HostNodeId != source.NodeId)
+                return (false, "Managed cluster links must target their owned Worker Nodes or Pods. Configure them in Kubernetes Explorer.");
 
             // Check for duplicate connection
             if (connections.Any(c => c.Source == source && c.Target == target))

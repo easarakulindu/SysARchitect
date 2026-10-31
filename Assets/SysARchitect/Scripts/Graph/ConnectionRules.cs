@@ -39,6 +39,7 @@ namespace SysARchitect.Graph
                     if (targetType == NodeType.Backend ||
                         targetType == NodeType.LoadBalancer ||
                         targetType == NodeType.DockerHost ||
+                        targetType == NodeType.KubernetesCluster ||
                         targetType == NodeType.Cache)
                         return (true, null);
                     if (targetType == NodeType.Frontend)
@@ -62,6 +63,7 @@ namespace SysARchitect.Graph
                 case NodeType.LoadBalancer:
                     if (targetType == NodeType.Backend ||
                         targetType == NodeType.DockerHost ||
+                        targetType == NodeType.KubernetesCluster ||
                         targetType == NodeType.Container ||
                         targetType == NodeType.KubernetesPod)
                         return (true, null);
@@ -94,6 +96,10 @@ namespace SysARchitect.Graph
                     if (targetType == NodeType.KubernetesPod)
                         return (true, null);
                     return (false, $"A Kubernetes Worker Node hosts Pods. It can only connect to Kubernetes Pods.");
+
+                case NodeType.KubernetesCluster:
+                    return targetType == NodeType.KubernetesNode ? (true, null)
+                        : (false, "This cluster's Service routes through its Worker Nodes to deployment Pods. Add workers in Kubernetes Explorer.");
 
                 case NodeType.KubernetesPod:
                     if (targetType == NodeType.Database ||
