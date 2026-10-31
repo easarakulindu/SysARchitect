@@ -11,6 +11,14 @@ namespace SysARchitect.Interaction
     /// </summary>
     public class NodeMovementController : MonoBehaviour
     {
+        public bool UseExternalPointer { get; set; }
+        public void MoveSelectedOnSurface(Vector3 point, Vector3 normal)
+        {
+            var visual = selectionController.SelectedNode;
+            if (visual == null) return;
+            float height = visual.GetComponent<MeshFilter>().sharedMesh.bounds.extents.y * visual.transform.lossyScale.y;
+            visual.transform.position = point + normal * height;
+        }
         [SerializeField] private Camera mainCamera;
         [SerializeField] private LayerMask placementSurface;
         [SerializeField] private NodeSelectionController selectionController;
@@ -27,6 +35,7 @@ namespace SysARchitect.Interaction
 
         void Update()
         {
+            if (UseExternalPointer) return;
             if (isDragging)
             {
                 HandleDrag();

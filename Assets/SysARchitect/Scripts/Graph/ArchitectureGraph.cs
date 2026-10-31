@@ -58,8 +58,8 @@ namespace SysARchitect.Graph
 
             // Create the GameObject
             var go = new GameObject(displayName);
+            go.transform.SetParent(transform, false);
             go.transform.position = position;
-            go.transform.SetParent(transform);
             go.layer = gameObject.layer;
 
             // Add GraphNode component
@@ -164,7 +164,7 @@ namespace SysARchitect.Graph
             // Create connection GameObject
             string connId = $"conn_{source.NodeId}_to_{target.NodeId}";
             var go = new GameObject(connId);
-            go.transform.SetParent(transform);
+            go.transform.SetParent(transform, false);
 
             // Add GraphConnection component
             var connection = go.AddComponent<GraphConnection>();

@@ -63,7 +63,7 @@ namespace SysARchitect.Visualization
             {
                 accessPacket = RequestPacketVisual.Create(rootRenderer.sharedMaterial);
                 accessPacket.gameObject.name = "Database key route";
-                accessPacket.transform.SetParent(enclosure.transform, true);
+                accessPacket.transform.SetParent(enclosure.transform, false);
                 accessPacket.IsPaused = true;
                 var target = members[model.LastMemberIndex];
                 accessPacket.Launch(accessPort, target,
@@ -97,7 +97,7 @@ namespace SysARchitect.Visualization
                 {
                     var packet = RequestPacketVisual.Create(rootRenderer.sharedMaterial);
                     packet.gameObject.name = "Replication write propagation";
-                    packet.transform.SetParent(enclosure.transform, true);
+                    packet.transform.SetParent(enclosure.transform, false);
                     packet.IsPaused = true;
                     float speed = Vector3.Distance(members[0].position, members[i].position) / (float)model.SynchronizationDelaySeconds;
                     packet.Launch(members[0], members[i], new Color(.8f, .45f, 1), speed, null);

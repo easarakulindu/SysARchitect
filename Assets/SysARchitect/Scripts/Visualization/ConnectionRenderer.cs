@@ -39,7 +39,7 @@ namespace SysARchitect.Visualization
         private void ApplyStyle()
         {
             if (m_LineRenderer == null) return;
-            m_LineRenderer.widthMultiplier = selected ? .026f : k_LineWidth;
+            m_LineRenderer.widthMultiplier = (selected ? .026f : k_LineWidth) * m_SourceTransform.lossyScale.x;
             m_LineMaterialInstance.color = selected ? new Color(1, .85f, .1f) : Time.unscaledTime < activityUntil ? activityColor : new Color(.15f, .7f, .95f);
         }
 
@@ -90,10 +90,11 @@ namespace SysARchitect.Visualization
             Vector3 direction = (target.position - source.position).normalized;
             start = Port(source, direction);
             end = Port(target, -direction);
-            if (Vector3.Dot(end - start, direction) <= .02f)
+            float scale = source.lossyScale.x;
+            if (Vector3.Dot(end - start, direction) <= .02f * scale)
             {
                 // Overlapping enclosures use ports above the objects instead of an inverted line.
-                float height = Mathf.Max(source.GetComponent<Collider>().bounds.max.y, target.GetComponent<Collider>().bounds.max.y) + .08f;
+                float height = Mathf.Max(source.GetComponent<Collider>().bounds.max.y, target.GetComponent<Collider>().bounds.max.y) + .08f * scale;
                 start = new Vector3(source.position.x, height, source.position.z);
                 end = new Vector3(target.position.x, height, target.position.z);
             }
@@ -107,7 +108,7 @@ namespace SysARchitect.Visualization
                 if (Mathf.Abs(direction[axis]) > .00001f)
                     distance = Mathf.Min(distance, bounds.extents[axis] / Mathf.Abs(direction[axis]));
             if (float.IsInfinity(distance)) distance = 0;
-            return bounds.center + direction * (distance + .025f);
+            return bounds.center + direction * (distance + .025f * node.lossyScale.x);
         }
 
         // ────────────────────────────────────────────────────────────────
@@ -143,7 +144,7 @@ namespace SysARchitect.Visualization
             m_LineRenderer.SetPosition(1, end);
             Vector3 direction = (end - start).normalized;
             Vector3 side = Vector3.Cross(direction, Vector3.up).normalized;
-            float size = Mathf.Min(selected ? .12f : .09f, Vector3.Distance(start, end) * .25f);
+            float size = Mathf.Min((selected ? .12f : .09f) * m_SourceTransform.lossyScale.x, Vector3.Distance(start, end) * .25f);
             m_LineRenderer.SetPosition(2, end - direction * size + side * size * .5f);
             m_LineRenderer.SetPosition(3, end);
             m_LineRenderer.SetPosition(4, end - direction * size - side * size * .5f);

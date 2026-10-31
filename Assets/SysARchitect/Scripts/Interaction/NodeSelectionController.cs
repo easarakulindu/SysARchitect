@@ -16,6 +16,7 @@ namespace SysARchitect.Interaction
     [DefaultExecutionOrder(-100)]
     public class NodeSelectionController : MonoBehaviour
     {
+        public bool UseExternalPointer { get; set; }
         [SerializeField] private Camera mainCamera;
         [SerializeField] private ArchitectureGraph graph;
         [SerializeField] private LayerMask nodeLayer;
@@ -57,6 +58,7 @@ namespace SysARchitect.Interaction
 
         void Update()
         {
+            if (UseExternalPointer) return;
             if (!Input.GetMouseButtonDown(0)) return;
 
             HandlePointerClick(Input.mousePosition);

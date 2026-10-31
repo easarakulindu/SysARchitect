@@ -12,7 +12,7 @@ namespace SysARchitect.Editor
         [MenuItem("SysARchitect/Build Linux Desktop Demo")]
         public static void BuildLinux()
         {
-            string directory = Environment.GetEnvironmentVariable("SYSARCHITECT_BUILD_DIRECTORY") ?? "Builds/Linux-RouterFix";
+            string directory = Environment.GetEnvironmentVariable("SYSARCHITECT_BUILD_DIRECTORY") ?? "Builds/Linux-Current";
             string path = Path.Combine(directory, "SysARchitect.x86_64");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             var xr = XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(BuildTargetGroup.Standalone);
@@ -20,7 +20,7 @@ namespace SysARchitect.Editor
             string previousVersion = PlayerSettings.bundleVersion;
             try
             {
-                PlayerSettings.bundleVersion = "0.3.1-router-fix";
+                PlayerSettings.bundleVersion = "0.4.0-ar-foundation";
                 // The template uses XR Simulation for AR previews. A desktop-only player
                 // must not start it or require simulation camera-background shaders.
                 if (xr != null) xr.InitManagerOnStart = false;

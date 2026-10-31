@@ -18,6 +18,14 @@ namespace SysARchitect.Interaction
     /// </summary>
     public class NodePlacementController : MonoBehaviour
     {
+        public bool UseExternalPointer { get; set; }
+        public bool PlaceOnSurface(Vector3 point, Vector3 normal)
+        {
+            if (!pendingNodeType.HasValue || previewObject == null) return false;
+            float height = previewObject.GetComponent<MeshFilter>().sharedMesh.bounds.extents.y * graph.transform.lossyScale.y;
+            FinalizePlacement(point + normal * height);
+            return true;
+        }
         [SerializeField] private ArchitectureGraph graph;
         [SerializeField] private Material defaultNodeMaterial;
         [SerializeField] private LayerMask placementSurface;
@@ -99,6 +107,7 @@ namespace SysARchitect.Interaction
 
         void Update()
         {
+            if (UseExternalPointer) return;
             if (!pendingNodeType.HasValue) return;
 
             // Cancel on right-click or Escape.

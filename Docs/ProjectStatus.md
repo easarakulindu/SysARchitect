@@ -2,6 +2,12 @@
 
 Target demonstration: November 2, 2026. No remote pushes are authorized.
 
+**Current approved work:** the October 31 educational/AR request authorizes milestones
+A–G and supersedes the earlier AR hold. See [Educational and AR delivery](EducationAndAR.md)
+for the current audit, milestone implementation and verification records. Historical
+milestone and delivery paths below are retained for provenance. `./RunDesktopDemo.sh`
+is the stable current Linux entry point.
+
 **October 31 database-router correction:** the older `Linux-DatabaseDemo` was reproduced
 rejecting Backend > LB and having no routing-role controls. The newer routing build accepts
 the architecture after explicit role selection. Current delivery uses `./RunDesktopDemo.sh`

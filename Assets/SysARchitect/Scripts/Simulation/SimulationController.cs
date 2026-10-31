@@ -257,9 +257,9 @@ namespace SysARchitect.Simulation
                 if (!pendingVisuals.TryGetValue(edge, out var transfer)) continue;
                 pendingVisuals.Remove(edge);
                 var packet = RequestPacketVisual.Create(packetMaterial);
-                packet.transform.SetParent(packetRoot, true);
+                packet.transform.SetParent(packetRoot, false);
                 packet.IsPaused = !IsRunning;
-                packet.Launch(edge, transfer.RequestId, transfer.Color, 1.5f);
+                packet.Launch(edge, transfer.RequestId, transfer.Color, 1.5f * graph.transform.lossyScale.x);
                 spawned++;
             }
         }

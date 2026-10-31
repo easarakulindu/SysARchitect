@@ -15,6 +15,7 @@ namespace SysARchitect.Interaction
     /// </summary>
     public class ConnectionCreationController : MonoBehaviour
     {
+        public bool UseExternalPointer { get; set; }
         [SerializeField] private ArchitectureGraph graph;
         [SerializeField] private Camera mainCamera;
         [SerializeField] private LayerMask nodeLayer;
@@ -64,6 +65,7 @@ namespace SysARchitect.Interaction
 
         void Update()
         {
+            if (UseExternalPointer) return;
             if (!isConnecting) return;
 
             // Cancel on right-click or Escape.
