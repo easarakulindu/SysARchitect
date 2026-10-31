@@ -57,13 +57,14 @@ namespace SysARchitect.UI
         private void Update()
         {
             if (statusText != null)
-                statusText.text = $"{interactionManager.CurrentMode} | {feedback}";
+                statusText.text = $"v{Application.version} | {interactionManager.CurrentMode} | {feedback}";
         }
 
         private void ShowFeedback(string message) => feedback = message;
 
         private void Start()
         {
+            Debug.Log($"SysARchitect v{Application.version} | {Application.dataPath}");
             CreateNodeButtons();
             SetupActionButtons();
         }
@@ -127,6 +128,8 @@ namespace SysARchitect.UI
         {
             if (interactionManager != null)
                 interactionManager.OnToolboxNodeSelected(type);
+            if (type == NodeType.LoadBalancer)
+                feedback = "Place the Load Balancer, then Select / Move and click it to choose Application Routing or Database Routing in ROUTING / CACHE.";
         }
 
         private void OnConnectClicked()

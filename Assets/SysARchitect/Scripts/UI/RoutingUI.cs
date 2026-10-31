@@ -27,6 +27,7 @@ namespace SysARchitect.UI
 
         private void Start()
         {
+            databaseButton.GetComponentInChildren<TextMeshProUGUI>().text = "Database Routing";
             dismissButton.onClick.AddListener(selection.Deselect);
             applicationButton.onClick.AddListener(() => SetRole(LoadBalancerRole.Application));
             databaseButton.onClick.AddListener(() => SetRole(LoadBalancerRole.Database));
@@ -36,6 +37,9 @@ namespace SysARchitect.UI
         private void SetRole(LoadBalancerRole role)
         {
             graph.TrySetRoutingRole(inspector.CurrentNode, role, out feedback);
+            // Preserve the result for the newly selected role instead of clearing it next frame.
+            lastNode = inspector.CurrentNode;
+            if (lastNode != null) lastRole = lastNode.RoutingRole;
         }
         private void Update()
         {
@@ -57,9 +61,11 @@ namespace SysARchitect.UI
             text.Clear();
             if (router)
             {
+                applicationButton.interactable = node.RoutingRole != LoadBalancerRole.Application;
+                databaseButton.interactable = node.RoutingRole != LoadBalancerRole.Database;
                 text.Append(node.RoutingRole == LoadBalancerRole.Application
                     ? "APPLICATION ROUTING: Frontend > Load Balancer > healthy Backends > Database.\n"
-                    : "DATABASE ROUTER: Backend > Router > one Database cluster. Configure replicas/shards on that Database.\n");
+                    : "DATABASE ROUTING (selected): Backend > Router > one Database cluster. Connect either endpoint first.\n");
                 text.Append("Database writes go only to primary; reads prefer healthy replicas; shard keys select one partition.\n");
                 foreach (var target in graph.GetOutgoingConnections(node))
                 {

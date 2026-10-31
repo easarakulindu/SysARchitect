@@ -23,7 +23,7 @@ namespace SysARchitect.Graph
                     return sourceType == NodeType.Backend ? (true, null)
                         : (false, "Database routers accept Backend requests. Use Backend > Database Router > Database cluster.");
                 if (sourceType != NodeType.Frontend)
-                    return (false, "This learning scenario uses Frontend > Application Load Balancer > Backends. For Backend > database routing, configure the target as Database Router first.");
+                    return (false, "This learning scenario uses Frontend > Application Load Balancer > Backends. For Backend > Database Router: choose Select / Move, click the Load Balancer, choose Database Routing in ROUTING / CACHE, then Connect again.");
             }
             if (sourceType == NodeType.LoadBalancer && sourceRole == LoadBalancerRole.Database)
                 return targetType == NodeType.Database ? (true, null)
@@ -65,7 +65,7 @@ namespace SysARchitect.Graph
                     if (targetType == NodeType.Frontend)
                         return (false, "Load Balancer distributes requests to backend services, not to frontends.");
                     if (targetType == NodeType.Database)
-                        return (false, "Application Load Balancers distribute to Backend instances. For Backend > Database cluster, configure this component as Database Router.");
+                        return (false, "Application Load Balancers distribute to Backend instances. For Backend > Database cluster: choose Select / Move, click the Load Balancer, choose Database Routing in ROUTING / CACHE, then Connect again.");
                     if (targetType == NodeType.LoadBalancer)
                         return (false, "Chaining Load Balancers is not supported in this simulation.");
                     return (false, $"Load Balancer cannot connect to {FormatTypeName(targetType)}. Connect it to Backend servers.");

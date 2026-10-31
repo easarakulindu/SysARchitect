@@ -3,6 +3,7 @@ namespace SysARchitect.Interaction
     using UnityEngine;
     using UnityEngine.EventSystems;
     using SysARchitect.Graph;
+    using SysARchitect.Core;
     using SysARchitect.Visualization;
     using System;
 
@@ -47,7 +48,7 @@ namespace SysARchitect.Interaction
             isConnecting = true;
             sourceNode = null;
             CleanupPreviewLine();
-            OnConnectionPrompt?.Invoke("Click a source node, then a target node. Placing nodes does not connect them.");
+            OnConnectionPrompt?.Invoke("Click source, then target. Configured Database Router links accept either click order. Set roles in Select / Move before connecting.");
         }
 
         /// <summary>
@@ -132,14 +133,24 @@ namespace SysARchitect.Interaction
             sourceNode = node;
             sourceNode.GetComponent<NodeVisual>().SetSelected(true);
             CreatePreviewLine();
-            OnConnectionPrompt?.Invoke($"Source: {node.DisplayName}. Now click a target node.");
+            OnConnectionPrompt?.Invoke($"First endpoint: {node.DisplayName}. Click the other endpoint. Database Router links keep Backend > Router > Database direction; other links use source then target.");
         }
 
         void OnDisable() => CancelConnection();
 
         private void TryCreateConnection(GraphNode target)
         {
-            var (isValid, errorMessage) = graph.ValidateConnection(sourceNode, target);
+            GraphNode from = sourceNode, to = target;
+            // Only an explicitly configured database router has unambiguous endpoint roles.
+            // Never infer database routing from a default application balancer: reversing
+            // Backend > Application LB would silently create the wrong learning architecture.
+            if ((sourceNode.Type == NodeType.Database && IsDatabaseRouter(target)) ||
+                (IsDatabaseRouter(sourceNode) && target.Type == NodeType.Backend))
+            {
+                from = target;
+                to = sourceNode;
+            }
+            var (isValid, errorMessage) = graph.ValidateConnection(from, to);
 
             if (!isValid)
             {
@@ -148,13 +159,21 @@ namespace SysARchitect.Interaction
                 return;
             }
 
-            graph.AddConnection(sourceNode, target);
-            OnConnectionPrompt?.Invoke($"Connected {sourceNode.DisplayName} > {target.DisplayName}. Choose Connect to add another link.");
+            var edge = graph.AddConnection(from, to);
+            if (edge == null)
+            {
+                OnConnectionError?.Invoke(graph.ValidateConnection(from, to).errorMessage);
+                return;
+            }
+            OnConnectionPrompt?.Invoke($"Connected {from.DisplayName} > {to.DisplayName}. Choose Connect to add another link.");
             OnConnectionCreated?.Invoke();
 
             // Return to a clean connection state so the user can chain connections.
             CancelConnection();
         }
+
+        private static bool IsDatabaseRouter(GraphNode node) =>
+            node.Type == NodeType.LoadBalancer && node.RoutingRole == LoadBalancerRole.Database;
 
         private void CreatePreviewLine()
         {

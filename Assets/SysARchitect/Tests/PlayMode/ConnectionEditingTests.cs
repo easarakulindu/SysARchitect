@@ -17,6 +17,85 @@ namespace SysARchitect.Tests
     public class ConnectionEditingTests
     {
         private static void Click(string path) => GameObject.Find(path).GetComponent<Button>().onClick.Invoke();
+        private static void PointerButton(string path, string childName = null)
+        {
+            Canvas.ForceUpdateCanvases();
+            var button = childName == null ? GameObject.Find(path).GetComponent<Button>()
+                : GameObject.Find(path).GetComponentsInChildren<Button>().Single(b => b.name == childName);
+            Assert.That(button.IsInteractable(), Is.True, path);
+            var position = RectTransformUtility.WorldToScreenPoint(null, button.transform.TransformPoint(button.GetComponent<RectTransform>().rect.center));
+            var pointer = new PointerEventData(EventSystem.current) { position = position, button = PointerEventData.InputButton.Left };
+            var hits = new System.Collections.Generic.List<RaycastResult>();
+            EventSystem.current.RaycastAll(pointer, hits);
+            Assert.That(hits.Count, Is.GreaterThan(0), $"{path}, position {position}, screen {Screen.width}x{Screen.height}");
+            Assert.That(ExecuteEvents.GetEventHandler<IPointerClickHandler>(hits[0].gameObject), Is.EqualTo(button.gameObject), "Button must actually be visible and clickable");
+            ExecuteEvents.Execute(button.gameObject, pointer, ExecuteEvents.pointerClickHandler);
+        }
+
+        [UnityTest]
+        public IEnumerator DatabaseRouterConnectionsUseDesktopPickingAndPreserveValidationAndDirection()
+        {
+            yield return SceneManager.LoadSceneAsync("Assets/SysARchitect/Scenes/DesktopWorkspace.unity"); yield return null;
+            var graph = Object.FindAnyObjectByType<ArchitectureGraph>();
+            var selection = Object.FindAnyObjectByType<NodeSelectionController>();
+            var connect = Object.FindAnyObjectByType<ConnectionCreationController>();
+            var manager = Object.FindAnyObjectByType<InteractionManager>();
+            var sim = Object.FindAnyObjectByType<SimulationController>(); sim.Engine.RequestsPerSecond = 0;
+            var b = graph.AddNode(NodeType.Backend, new Vector3(-.6f, .2f, 0));
+            var lb = graph.AddNode(NodeType.LoadBalancer, new Vector3(0, .05f, 0));
+            var db = graph.AddNode(NodeType.Database, new Vector3(.6f, .125f, 0));
+            Physics.SyncTransforms(); yield return null;
+            string error = null; connect.OnConnectionError += message => error = message;
+            System.Action<GraphNode> endpoint = node => connect.HandlePointerClick(Camera.main.WorldToScreenPoint(node.transform.position));
+            PointerButton("Workspace UI/Toolbox/Connect source > target"); endpoint(b); endpoint(lb);
+            Assert.That(graph.Connections, Is.Empty);
+            Assert.That(error, Is.EqualTo(graph.ValidateConnection(b, lb).errorMessage));
+            Assert.That(error, Does.Contain("Select / Move"));
+            yield return null;
+            Assert.That(GameObject.Find("Workspace UI/Feedback").GetComponentInChildren<TMPro.TextMeshProUGUI>().text, Does.Contain(error));
+            PointerButton("Workspace UI/Toolbox", "Select / Move");
+            selection.HandlePointerClick(Camera.main.WorldToScreenPoint(lb.transform.position)); yield return null; yield return null;
+            PointerButton("Workspace UI/Routing Inspector/Database Router"); yield return null;
+            Assert.That(lb.RoutingRole, Is.EqualTo(LoadBalancerRole.Database));
+            Assert.That(graph.ValidateConnection(db, lb).isValid, Is.False, "UI click order must not weaken directed graph rules");
+            Assert.That(graph.ValidateConnection(lb, b).isValid, Is.False);
+            Assert.That(GameObject.Find("Workspace UI/Routing Inspector/Database Router").GetComponentInChildren<TMPro.TextMeshProUGUI>().text, Is.EqualTo("Database Routing"));
+            // Both click orders must yield precisely the same directed graph.
+            for (int reverse = 0; reverse < 2; reverse++)
+            {
+                PointerButton("Workspace UI/Toolbox/Connect source > target");
+                yield return null; yield return null;
+                endpoint(reverse == 0 ? b : lb); endpoint(reverse == 0 ? lb : b); yield return null;
+                PointerButton("Workspace UI/Toolbox/Connect source > target");
+                yield return null; yield return null;
+                endpoint(reverse == 0 ? lb : db); endpoint(reverse == 0 ? db : lb); yield return null;
+                Assert.That(graph.Connections.Any(e => e.Source == b && e.Target == lb), Is.True, $"Order {reverse}, feedback {error}");
+                Assert.That(graph.Connections.Any(e => e.Source == lb && e.Target == db), Is.True, $"Order {reverse}, feedback {error}");
+                Assert.That(graph.Connections.Count, Is.EqualTo(2));
+                PointerButton("Workspace UI/Toolbox/Connect source > target"); endpoint(db); endpoint(lb);
+                Assert.That(error, Is.EqualTo("This connection already exists."));
+                manager.ReturnToSelectMode();
+                if (reverse == 0) foreach (var edge in graph.Connections.ToArray()) graph.RemoveConnection(edge);
+                yield return null;
+            }
+            // Traffic enters through a Frontend, rather than the Database Explorer shortcut.
+            var f = graph.AddNode(NodeType.Frontend, new Vector3(-.9f, .15f, .4f)); Physics.SyncTransforms();
+            PointerButton("Workspace UI/Toolbox/Connect source > target"); endpoint(f); endpoint(b); yield return null;
+            var traversed = new System.Collections.Generic.List<string>();
+            sim.Engine.OnTransfer += (id, from, to) => traversed.Add(from + ">" + to);
+            sim.Engine.SubmitRequest(f.NodeId, true, 7); Drain(sim);
+            sim.Engine.SubmitRequest(f.NodeId, false, 7); Drain(sim);
+            Assert.That(sim.Engine.Succeeded, Is.EqualTo(2)); Assert.That(sim.Engine.Failed, Is.Zero);
+            Assert.That(traversed.Count(path => path == b.NodeId + ">" + lb.NodeId), Is.EqualTo(2));
+            Assert.That(traversed.Count(path => path == lb.NodeId + ">" + db.NodeId), Is.EqualTo(2));
+            Assert.That(sim.Engine.FindNode(db.NodeId).Database.Writes, Is.EqualTo(1));
+            Assert.That(sim.Engine.FindNode(db.NodeId).Database.Reads, Is.EqualTo(1));
+            // Reconfiguration cannot silently reinterpret existing edges.
+            selection.HandlePointerClick(Camera.main.WorldToScreenPoint(lb.transform.position)); yield return null; yield return null;
+            PointerButton("Workspace UI/Routing Inspector/Application Routing"); yield return null;
+            Assert.That(lb.RoutingRole, Is.EqualTo(LoadBalancerRole.Database));
+            Assert.That(GameObject.Find("Workspace UI/Routing Inspector").GetComponentsInChildren<TMPro.TextMeshProUGUI>().Any(t => t.text.Contains("Remove incompatible")), Is.True);
+        }
         private static void Drain(SimulationController simulation)
         {
             for (int i = 0; i < 200 && simulation.Engine.InFlight > 0; i++) simulation.StepOnce();
