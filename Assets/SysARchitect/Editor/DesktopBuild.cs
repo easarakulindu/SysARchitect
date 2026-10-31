@@ -12,12 +12,15 @@ namespace SysARchitect.Editor
         [MenuItem("SysARchitect/Build Linux Desktop Demo")]
         public static void BuildLinux()
         {
-            const string path = "Builds/Linux/SysARchitect.x86_64";
+            string directory = Environment.GetEnvironmentVariable("SYSARCHITECT_BUILD_DIRECTORY") ?? "Builds/Linux-RouterFix";
+            string path = Path.Combine(directory, "SysARchitect.x86_64");
             Directory.CreateDirectory(Path.GetDirectoryName(path));
             var xr = XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(BuildTargetGroup.Standalone);
             bool autoStartXr = xr != null && xr.InitManagerOnStart;
+            string previousVersion = PlayerSettings.bundleVersion;
             try
             {
+                PlayerSettings.bundleVersion = "0.3.1-router-fix";
                 // The template uses XR Simulation for AR previews. A desktop-only player
                 // must not start it or require simulation camera-background shaders.
                 if (xr != null) xr.InitManagerOnStart = false;
@@ -31,10 +34,13 @@ namespace SysARchitect.Editor
                 if (report.summary.result != BuildResult.Succeeded)
                     throw new InvalidOperationException("Desktop build failed: " + report.summary.result);
                 Debug.Log($"Desktop build succeeded: {Path.GetFullPath(path)} ({report.summary.totalSize} bytes)");
+                File.WriteAllText(Path.Combine(directory, "BUILD-INFO.txt"),
+                    $"SysARchitect {PlayerSettings.bundleVersion}\nUnity {Application.unityVersion}\nBuilt UTC {DateTime.UtcNow:O}\nScene {DesktopSceneSetup.ScenePath}\nScene dependency hash {AssetDatabase.GetAssetDependencyHash(DesktopSceneSetup.ScenePath)}\n");
             }
             finally
             {
                 if (xr != null) xr.InitManagerOnStart = autoStartXr;
+                PlayerSettings.bundleVersion = previousVersion;
             }
         }
     }

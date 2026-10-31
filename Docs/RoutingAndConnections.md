@@ -3,13 +3,18 @@
 These corrections extend the existing graph, simulator, Database model and input controllers.
 The toolbox still has one configurable Load Balancer and one expandable Database entry.
 
+**Current desktop delivery:** use `./RunDesktopDemo.sh` (`Builds/Linux-RouterFix`,
+visible version `0.3.1-router-fix`). See [the database-router investigation](DatabaseRouterFix.md)
+for reproduction steps, legacy-build diagnosis and the updated click-order behavior.
+The verification/delivery notes below describe the earlier routing milestone.
+
 ## Supported routing
 
 - **Application Routing** (default): Frontend > Load Balancer > healthy Backends > storage.
   Connected operational backends receive round-robin traffic. Crashed/offline/recovering
   targets are skipped; saturation alone does not crash a backend.
 - **Database Router**: Backend > Load Balancer configured as Database Router > one Database
-  cluster. Select the router, then choose Database Router before making these links.
+  cluster. Choose Select / Move, select the router, then choose Database Routing before making these links.
   Configure replication/sharding on the Database itself. Both routing roles can be used
   together: application LB > multiple backends > database router > Database cluster.
 
@@ -81,7 +86,8 @@ caching does not automatically increase backend processing capacity.
 - In Select mode, click a line to select it. Node hits take priority. The selected line and
   arrow become wider and yellow. The Connection Inspector displays endpoints/activity.
 - Use either **Delete Connection** button, or Delete/Backspace outside a text field.
-  Only the edge is removed. Reconnect using Connect > source > target.
+  Only the edge is removed. Reconnect using Connect > source > target. Explicitly configured
+  Database Router links also accept reverse endpoint selection while preserving their direction.
 - Node deletion still removes all attached edges. Graph edits immediately update simulator
   target lists and remove associated packet visuals. Requests already delivered may finish;
   later hops use the current graph and report missing dependencies.

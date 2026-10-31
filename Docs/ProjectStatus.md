@@ -2,6 +2,13 @@
 
 Target demonstration: November 2, 2026. No remote pushes are authorized.
 
+**October 31 database-router correction:** the older `Linux-DatabaseDemo` was reproduced
+rejecting Backend > LB and having no routing-role controls. The newer routing build accepts
+the architecture after explicit role selection. Current delivery uses `./RunDesktopDemo.sh`
+and `Builds/Linux-RouterFix` with visible version `0.3.1-router-fix`; see
+[reproduction, workflow and validation](DatabaseRouterFix.md). AR integration stays on hold.
+The following sections retain the project's historical milestone records.
+
 ## Inspected baseline
 
 - Unity 6000.6.5f1 (3ff58d469c8a), URP 17.6.0, Input System 1.20.0,
