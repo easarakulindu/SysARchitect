@@ -301,3 +301,72 @@ for an 8-second real-player smoke check without application exceptions. Build an
 player logs: `/tmp/sysarchitect-mobile-linux-build.log` and
 `/tmp/sysarchitect-mobile-linux-player.log`. The previous E build is preserved in
 `Builds/Linux-Quizzes`. Next priority: G's models, presentation and mobile UI.
+
+## G — Holographic hardware and landscape touch UI
+
+Extended the existing procedural generator with ten custom detailed models:
+monitor/stand, rack server, banded storage drum, port/antenna router, pinned cache
+chip, ribbed container, octagonal worker, compact Pod beacon, Docker chassis and
+cluster hub. The convex base mesh API remains available for existing internal
+database visuals. Hardware combines shell, dark inset panels and bright strips
+into one mesh/submesh per model, below 1,500 vertices in all ten cases. The new
+URP shader uses flat face shading and emissive-looking accents with no bloom,
+real-time lights, shadows, depth texture or post-processing dependency. Placement
+previews retain transparency. This is an original code-authored design, not a
+downloaded asset pack.
+
+CPU (top cyan) and memory fraction (lower purple) gauges read the existing
+GraphNode monitoring values. Status indicators distinguish amber pulsing overload,
+pink/red crash, grey offline and blue recovery; selected nodes/edges remain clear.
+Docker/worker/cluster enclosures add faint transparent shells and colored outlines
+that track actual owner status and selection. Managed nodes stay real graph nodes.
+Owned materials/meshes are cleaned up. Larger root labels, compact contained
+labels and selected-only deep Pod labels reduce clutter. Desktop orbit/reset now
+starts slightly farther out to fit expanded models. Surface placement/movement use
+the actual detailed mesh bottom, including asymmetric monitor stands.
+
+AR reuses all existing controls in scrollable touch drawers: toolbox and simulation
+on the left; selected-node/edge and routing/database/Docker/Kubernetes details in
+one right drawer. A top toolbar exposes toolbox, simulation, reposition and hide
+details. Placement/connection transitions hide the toolbox; it can be reopened to
+cancel or choose another command. Validation feedback stays visible. Lessons use
+grouped action/step/quiz rows, scrollable explanations and opaque modal backgrounds;
+quiz choices, explanations and summaries scroll without fixed-height clipping.
+Buttons use 88 reference units, labels 26–28, and existing input/selection/rotation/
+configuration commands remain bound. This is landscape UI with safe-area anchoring;
+physical screen ergonomics still need the device acceptance checks.
+
+Files: extended `ProceduralMeshGenerator`, `NodeVisual`, `NodeColorPalette`,
+`WorkloadEnclosure`, placement/movement and desktop camera; new
+`Materials/HolographicHardware.shader` and material; `AR/MobilePanelLayout`,
+extended `MobileWorkspaceUI`, `Editor/VisualDesignSetup`, mobile button prefab,
+both existing scenes, build versions and visual/layout regressions.
+
+Validation: **85 Edit Mode and 30 Play Mode cases passed**, including existing
+routing/cache/database/resource/failure/lesson/quiz behavior. New checks cover
+all ten meshes' bounds, face normals, color regions, vertex budget, actual
+surface placement, gauges/status, scrolling/control sizes, database role changes
+through the mobile drawer, lesson/quiz layout and feedback/input restoration.
+The first visual run exposed a stale fixed collider-size assertion and nested
+mobile list sizing; both were corrected. A subsequent grouped-control test caught
+literal '/' UI names being interpreted as paths; exact child-name lookup repaired
+that integration. Earlier failure logs are retained; successful results are
+`/tmp/sysarchitect-final-core.xml` and `/tmp/sysarchitect-final-play.xml`.
+Rendered captures inspected: `/tmp/sysarchitect-hardware-gallery.png`,
+`/tmp/sysarchitect-mobile-layout.png`, `/tmp/sysarchitect-mobile-quiz.png`.
+These synthetic UI previews are not physical AR tests or learner outcomes.
+
+Native Linux checks caught an additional player-only defect: a runtime-created
+URP material lost its transparent shader variant in the desktop build and hid
+the Docker containers behind an opaque shell. `Resources/WorkloadGlass.mat`
+now explicitly retains that variant, and outlines tint their actual material
+instead of relying on unsupported vertex-color multiplication. The regression
+checks the real asset's transparency/blending/depth state and runtime shell
+non-pickability. Native screenshots preserve the before/after evidence.
+
+### Mobile UI release-candidate follow-up
+
+The preserved mobile draft has now been reconciled with model commit `6da8052`.
+Current implementation/verification is recorded in
+[MobileUIReleaseCandidate.md](MobileUIReleaseCandidate.md); the earlier G results
+above are historical checkpoints, not physical-device acceptance.

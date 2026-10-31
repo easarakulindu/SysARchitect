@@ -65,7 +65,7 @@ namespace SysARchitect.UI
         public void Open(QuizStage stage)
         {
             var session = new QuizSession(stage); SuspendInput(); Session = session;
-            feedback.rectTransform.anchoredPosition = new Vector2(32, -510); feedback.rectTransform.sizeDelta = new Vector2(916, 128);
+            PlaceDesktopFeedback(new Vector2(32, -510), new Vector2(916, 128));
             next.gameObject.SetActive(true); foreach (var button in answers) button.gameObject.SetActive(true);
             RefreshQuestion();
         }
@@ -108,7 +108,7 @@ namespace SysARchitect.UI
             SuspendInput(); Session = null; foreach (var button in answers) button.gameObject.SetActive(false); next.gameObject.SetActive(false);
             title.text = "Your local learning progress";
             question.text = "Verified lesson completion and completed practice quizzes are stored on this device. Pre and post use different question sets.";
-            feedback.rectTransform.anchoredPosition = new Vector2(32, -180); feedback.rectTransform.sizeDelta = new Vector2(916, 450);
+            PlaceDesktopFeedback(new Vector2(32, -180), new Vector2(916, 450));
             text.Clear();
             foreach (var lesson in LessonCatalog.All) text.Append($"{(lessons.Progress.IsComplete(lesson.Id) ? "Complete" : "Pending")}: {lesson.Title}\n");
             text.Append($"\nLessons completed: {lessons.Progress.CompletedCount}/5\n");
@@ -123,6 +123,11 @@ namespace SysARchitect.UI
         public void Close()
         {
             overlay.SetActive(false); guide.SetActive(true); Session = null; RestoreInput(); AppStateManager.Instance?.SetMode(AppMode.Lesson);
+        }
+        private void PlaceDesktopFeedback(Vector2 position, Vector2 size)
+        {
+            if (feedback.GetComponent<LayoutElement>() != null) return;
+            feedback.rectTransform.anchoredPosition = position; feedback.rectTransform.sizeDelta = size;
         }
     }
 }

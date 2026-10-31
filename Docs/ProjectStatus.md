@@ -30,6 +30,12 @@ and startup check. See [scope, remaining files and evidence-based feature status
 The current Android APK predates the gauge corrections; on-device AR remains
 unverified. The mobile-layout work is preserved outside this focused commit.
 
+**Mobile UI follow-up:** the preserved layout has been completed and checked at
+four landscape phone resolutions with synthetic safe-area insets. Current results
+are 91 Edit Mode / 37 Play Mode passed; desktop regressions remain green. See
+[mobile UI release-candidate record](MobileUIReleaseCandidate.md) for controls,
+reproduced corrections, rendering evidence and physical-device limitations.
+
 **October 31 database-router correction:** the older `Linux-DatabaseDemo` was reproduced
 rejecting Backend > LB and having no routing-role controls. The newer routing build accepts
 the architecture after explicit role selection. Current delivery uses `./RunDesktopDemo.sh`

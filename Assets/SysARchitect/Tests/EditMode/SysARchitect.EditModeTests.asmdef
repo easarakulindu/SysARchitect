@@ -1,6 +1,6 @@
 {
     "name": "SysARchitect.EditModeTests",
-    "references": ["SysARchitect.Runtime", "Unity.InputSystem"],
+    "references": ["SysARchitect.Runtime", "Unity.InputSystem", "UnityEngine.UI"],
     "includePlatforms": ["Editor"],
     "optionalUnityReferences": ["TestAssemblies"]
 }
