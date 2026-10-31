@@ -263,3 +263,41 @@ Linux build `0.8.0-quizzes-progress` passed (108,864,989 bytes), log
 `/tmp/sysarchitect-quiz-linux-build.log`. The prior D build is preserved in
 `Builds/Linux-Lessons`. Remaining checks include physical mobile input and device
 AR; no external deployment success is claimed. Next priority: F platform builds.
+
+## F — Mobile build configuration and recovered platform delivery
+
+The interrupted F changes were recovered after the VS Code crash; committed A–E
+features, scenes and unrelated untracked files were preserved. `Editor/MobileBuild.cs`
+provides explicit AR configuration, Android APK build and guarded Mac-only iOS
+export commands. Mobile builds use ARWorkspace, required ARCore/ARKit, a stable
+bundle ID, landscape UI, correct Android SDK/architecture/backend and an explanatory
+iOS camera permission. Desktop build selection remains explicit.
+
+The actual Android build exposed unsupported Both input backends. Mobile touch
+now uses Input System Touchscreen, AR UI uses InputSystemUIInputModule, shared
+keyboard shortcuts tolerate keyboard absence, and the build temporarily selects
+Input System only before restoring desktop input configuration. Existing graph,
+routing and simulation ownership remain unchanged. All 207 original AR scene
+GameObjects and original asset GUIDs were preserved during the UI module change.
+
+**Android APK built and verified** at `Builds/Android/SysARchitect.apk` (0.9.0,
+35,840,852 bytes). Manifest, ARM64-only native ABI and debug signing were checked
+with installed aapt/apksigner. The first process was interrupted and the next
+attempt exhausted `/tmp` during packaging; preserving/moving generated caches
+resolved storage and a full retry succeeded. Details, checksum, logs, build commands
+and the **M3 MacBook Pro / iPhone** installation workflow are in
+[MobileBuilds.md](MobileBuilds.md). No Android device was connected. This Linux
+host lacks iOS Build Support and Xcode; export/signing/install/device AR remain
+unverified. ARKit 6.6 requires Xcode 26+, with an appropriate Mac OS version.
+
+Validation: **72 Edit Mode and 28 Play Mode cases passed**. Results/logs:
+`/tmp/sysarchitect-mobile-core.xml`, `/tmp/sysarchitect-mobile-play.xml` and
+same-basename logs. Added phase-conversion regressions cover device touch begin,
+move, stationary, release and cancel; the existing shared gesture tests still
+exercise placement, movement, node/edge selection, connection/deletion and tracking
+gates. APK log `/tmp/sysarchitect-mobile-android-final.log`.
+Linux `0.9.0-mobile-ready` rebuilt successfully (108,865,501 bytes) and launched
+for an 8-second real-player smoke check without application exceptions. Build and
+player logs: `/tmp/sysarchitect-mobile-linux-build.log` and
+`/tmp/sysarchitect-mobile-linux-player.log`. The previous E build is preserved in
+`Builds/Linux-Quizzes`. Next priority: G's models, presentation and mobile UI.

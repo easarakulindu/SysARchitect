@@ -8,6 +8,14 @@ for the current audit, milestone implementation and verification records. Histor
 milestone and delivery paths below are retained for provenance. `./RunDesktopDemo.sh`
 is the stable current Linux entry point.
 
+**Crash recovery (October 31):** verified existing A–E commits `ea0f368`,
+`be112d4`, `3b8b25a`, `8214677`, `56fbef8` and their test/build records.
+Recovered F's uncommitted mobile build helper and input migration without
+rebuilding any application systems. Android APK now exists; see
+[platform configuration, actual result and M3 MacBook/iPhone handoff](MobileBuilds.md).
+No on-device AR or iOS deployment is claimed. The unrelated `dotnet-tools.json`
+remains untouched and untracked. G visual/mobile UI polish is the next milestone.
+
 **October 31 database-router correction:** the older `Linux-DatabaseDemo` was reproduced
 rejecting Backend > LB and having no routing-role controls. The newer routing build accepts
 the architecture after explicit role selection. Current delivery uses `./RunDesktopDemo.sh`

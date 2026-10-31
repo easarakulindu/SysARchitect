@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
+using TouchPhase = UnityEngine.TouchPhase;
 using SysARchitect.Graph;
 using SysARchitect.Interaction;
 
@@ -26,13 +28,34 @@ namespace SysARchitect.AR
         }
         private void Update()
         {
-            if (Input.touchCount != 1) { activeGesture = false; finger = -1; return; }
-            var touch = Input.GetTouch(0);
-            if (touch.phase == TouchPhase.Began) { finger = touch.fingerId; beganOverUI = NodeSelectionController.IsOverUI(touch.position); }
-            if (touch.fingerId != finger) return;
-            if (touch.phase == TouchPhase.Ended && !beganOverUI && !workspace.HasWorkspace && !NodeSelectionController.IsOverUI(touch.position))
-                workspace.TryPlaceWorkspace(touch.position);
-            HandlePointer(touch.position, touch.phase, workspace.CanInteract);
+            ReadTouchscreen(Touchscreen.current);
+        }
+        public void ReadTouchscreen(Touchscreen screen)
+        {
+            if (screen == null) { activeGesture = false; finger = -1; return; }
+            UnityEngine.InputSystem.Controls.TouchControl touch = null;
+            int count = 0;
+            foreach (var candidate in screen.touches)
+                if (candidate.press.isPressed || candidate.press.wasReleasedThisFrame) { touch = candidate; count++; }
+            if (count != 1) { activeGesture = false; finger = -1; return; }
+            int id = touch.touchId.ReadValue(); Vector2 position = touch.position.ReadValue();
+            var phase = ConvertPhase(touch.phase.ReadValue());
+            if (phase == TouchPhase.Began) { finger = id; beganOverUI = NodeSelectionController.IsOverUI(position); }
+            if (id != finger) return;
+            if (phase == TouchPhase.Ended && !beganOverUI && !workspace.HasWorkspace && !NodeSelectionController.IsOverUI(position))
+                workspace.TryPlaceWorkspace(position);
+            HandlePointer(position, phase, workspace.CanInteract);
+        }
+        public static TouchPhase ConvertPhase(UnityEngine.InputSystem.TouchPhase phase)
+        {
+            switch (phase)
+            {
+                case UnityEngine.InputSystem.TouchPhase.Began: return TouchPhase.Began;
+                case UnityEngine.InputSystem.TouchPhase.Moved: return TouchPhase.Moved;
+                case UnityEngine.InputSystem.TouchPhase.Stationary: return TouchPhase.Stationary;
+                case UnityEngine.InputSystem.TouchPhase.Ended: return TouchPhase.Ended;
+                default: return TouchPhase.Canceled;
+            }
         }
         public void HandlePointer(Vector2 position, TouchPhase phase, bool trackingAllowsInput)
         {

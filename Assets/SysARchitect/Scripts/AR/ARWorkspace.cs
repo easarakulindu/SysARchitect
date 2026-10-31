@@ -29,7 +29,9 @@ namespace SysARchitect.AR
         {
             graph.gameObject.SetActive(false);
             Application.targetFrameRate = 60;
+#if ENABLE_LEGACY_INPUT_MANAGER
             Input.simulateMouseWithTouches = false;
+#endif
         }
         private void Update()
         {

@@ -1,6 +1,7 @@
 using System.Text;
 using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using SysARchitect.AR;
 using SysARchitect.Core;
@@ -60,7 +61,7 @@ namespace SysARchitect.UI
             suspended = false;
         }
         private void OnDisable() => RestoreInput();
-        private void Update() { if (overlay.activeSelf && Input.GetKeyDown(KeyCode.Escape)) Close(); }
+        private void Update() { if (overlay.activeSelf && Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame) Close(); }
         public void Open(QuizStage stage)
         {
             var session = new QuizSession(stage); SuspendInput(); Session = session;

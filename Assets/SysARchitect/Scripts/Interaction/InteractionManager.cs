@@ -4,6 +4,7 @@ namespace SysARchitect.Interaction
     using UnityEngine.EventSystems;
     using UnityEngine.UI;
     using TMPro;
+    using UnityEngine.InputSystem;
     using SysARchitect.Core;
     using SysARchitect.Graph;
 
@@ -45,8 +46,9 @@ namespace SysARchitect.Interaction
 
         void LateUpdate()
         {
-            if (Input.GetKeyDown(KeyCode.Delete) || Input.GetKeyDown(KeyCode.Backspace)) HandleDeleteShortcut();
-            if (Input.GetKeyDown(KeyCode.Escape) ||
+            var keyboard = Keyboard.current;
+            if (keyboard != null && (keyboard.deleteKey.wasPressedThisFrame || keyboard.backspaceKey.wasPressedThisFrame)) HandleDeleteShortcut();
+            if ((keyboard != null && keyboard.escapeKey.wasPressedThisFrame) ||
                 (currentMode == Mode.Place && placementController != null && !placementController.IsPlacing) ||
                 (currentMode == Mode.Connect && connectionController != null && !connectionController.IsConnecting))
                 ReturnToSelectMode();

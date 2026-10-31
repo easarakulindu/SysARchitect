@@ -20,7 +20,7 @@ namespace SysARchitect.Editor
             string previousVersion = PlayerSettings.bundleVersion;
             try
             {
-                PlayerSettings.bundleVersion = "0.8.0-quizzes-progress";
+                PlayerSettings.bundleVersion = "0.9.0-mobile-ready";
                 // The template uses XR Simulation for AR previews. A desktop-only player
                 // must not start it or require simulation camera-background shaders.
                 if (xr != null) xr.InitManagerOnStart = false;
