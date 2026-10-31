@@ -20,6 +20,11 @@ namespace SysARchitect.Visualization
         TextMeshPro m_Label;
         MaterialPropertyBlock m_PropBlock;
         BoxCollider m_Collider;
+        Transform cpuFill, memoryFill;
+        float nextResourceUpdate;
+        Transform resourceRoot;
+        Transform workspaceRoot;
+        float resourceGaugeWidth;
 
         // ── Visual state ───────────────────────────────────────────────
         bool m_IsSelected;
@@ -47,6 +52,7 @@ namespace SysARchitect.Visualization
         public void Initialize(GraphNode node, Material baseMaterial)
         {
             m_GraphNode = node;
+            workspaceRoot = node.transform.parent;
 
             // Components
             m_MeshFilter = GetComponent<MeshFilter>();
@@ -54,11 +60,13 @@ namespace SysARchitect.Visualization
             m_PropBlock = new MaterialPropertyBlock();
 
             // Procedural mesh
-            Mesh mesh = ProceduralMeshGenerator.GenerateMesh(node.Type);
+            Mesh mesh = ProceduralMeshGenerator.GenerateHolographicMesh(node.Type);
             m_MeshFilter.sharedMesh = mesh;
 
             // Material — use a per-instance copy so colour changes are isolated.
             m_MeshRenderer.material = new Material(baseMaterial);
+            m_MeshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            m_MeshRenderer.receiveShadows = false;
             ApplyAccentColor(node.Type);
 
             // Box collider for raycasting
@@ -68,6 +76,7 @@ namespace SysARchitect.Visualization
 
             // Floating label
             CreateLabel(node.DisplayName, mesh.bounds);
+            CreateResourceIndicators(mesh.bounds);
 
             // Initial status
             m_CurrentStatus = NodeStatus.Healthy;
@@ -107,12 +116,58 @@ namespace SysARchitect.Visualization
         void LateUpdate()
         {
             if (m_Label != null && Camera.main != null)
+            {
                 m_Label.transform.rotation = Camera.main.transform.rotation;
+                // Keep contained workload labels legible without magnifying the actual model.
+                float parentScale = workspaceRoot != null ? workspaceRoot.lossyScale.x : 1;
+                float labelScale = Mathf.Min(3.5f, parentScale / Mathf.Max(.001f, transform.lossyScale.x));
+                m_Label.transform.localScale = Vector3.one * labelScale;
+                m_Label.fontSize = m_GraphNode.HostNodeId != null && !m_IsSelected ? .32f : .5f;
+                bool deeplyNested = transform.parent != null && transform.parent.GetComponent<GraphNode>()?.HostNodeId != null;
+                m_Label.enabled = !deeplyNested || m_IsSelected;
+            }
             if (m_GraphNode != null) UpdateStatus(m_GraphNode.Status);
+            if (Time.unscaledTime >= nextResourceUpdate && m_GraphNode != null)
+            {
+                nextResourceUpdate = Time.unscaledTime + .2f;
+                SetGauge(cpuFill, m_GraphNode.CpuUtilization);
+                SetGauge(memoryFill, m_GraphNode.MemoryUsageMB / Mathf.Max(1, m_GraphNode.MemoryLimitMB));
+            }
             if (m_CurrentStatus == NodeStatus.Overloaded) m_IsDirty = true;
             if (!m_IsDirty) return;
             m_IsDirty = false;
             ApplyVisualState();
+        }
+
+        void CreateResourceIndicators(Bounds bounds)
+        {
+            resourceGaugeWidth = Mathf.Clamp(bounds.size.x * .9f, .08f, .22f);
+            resourceRoot = new GameObject("CPU and RAM indicators (top to bottom)").transform;
+            resourceRoot.SetParent(transform, false);
+            resourceRoot.localPosition = new Vector3(0, bounds.min.y + .04f, bounds.max.z + .015f);
+            Transform Bar(string name, float y, Color color)
+            {
+                var go = GameObject.CreatePrimitive(PrimitiveType.Cube); go.name = name; go.layer = 2;
+                Destroy(go.GetComponent<Collider>()); go.transform.SetParent(resourceRoot, false);
+                go.transform.localPosition = new Vector3(0, y, 0); go.transform.localScale = new Vector3(resourceGaugeWidth, .009f, .009f);
+                var renderer = go.GetComponent<MeshRenderer>(); renderer.sharedMaterial = m_MeshRenderer.sharedMaterial;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; renderer.receiveShadows = false;
+                var block = new MaterialPropertyBlock(); block.SetColor(k_BaseColorId, color); block.SetColor(k_EmissionColorId, color * .15f);
+                renderer.SetPropertyBlock(block); return go.transform;
+            }
+            Bar("CPU track", 0, new Color(.03f, .06f, .1f));
+            Bar("RAM track", -.018f, new Color(.03f, .06f, .1f));
+            cpuFill = Bar("CPU utilization", 0, new Color(0, .95f, 1));
+            memoryFill = Bar("RAM utilization", -.018f, new Color(.65f, .4f, 1));
+            cpuFill.localPosition += Vector3.forward * .006f; memoryFill.localPosition += Vector3.forward * .006f;
+            SetGauge(cpuFill, 0); SetGauge(memoryFill, 0);
+        }
+        void SetGauge(Transform bar, float value)
+        {
+            float amount = Mathf.Clamp01(value);
+            bar.gameObject.SetActive(amount > 0);
+            bar.localScale = new Vector3(Mathf.Max(.001f, resourceGaugeWidth * amount), .009f, .009f);
+            var position = bar.localPosition; position.x = resourceGaugeWidth * (amount - 1) * .5f; bar.localPosition = position;
         }
 
         void OnDestroy()
@@ -148,10 +203,11 @@ namespace SysARchitect.Visualization
             if (m_Label != null)
             {
                 string name = m_GraphNode.DisplayName;
-                if (!m_IsSelected && name.Length > 22) name = name.Substring(0, 20) + "…";
+                if (!m_IsSelected && name.Length > 18) name = name.Substring(0, 16) + "…";
                 if (m_GraphNode.Type == NodeType.LoadBalancer)
                     name += m_GraphNode.RoutingRole == LoadBalancerRole.Database ? "\nDB Router" : "\nApp LB";
                 m_Label.text = m_CurrentStatus == NodeStatus.Healthy ? name : $"{name}\n{m_CurrentStatus}";
+                m_Label.color = m_IsSelected ? NodeColorPalette.Selected : m_CurrentStatus == NodeStatus.Healthy ? Color.white : statusColor;
             }
 
             if (m_IsSelected)
@@ -180,7 +236,7 @@ namespace SysARchitect.Visualization
 
             m_Label = labelGo.AddComponent<TextMeshPro>();
             m_Label.text = text;
-            m_Label.fontSize = .3f;
+            m_Label.fontSize = .5f;
             m_Label.textWrappingMode = TextWrappingModes.NoWrap;
             m_Label.raycastTarget = false;
             m_Label.alignment = TextAlignmentOptions.Center;

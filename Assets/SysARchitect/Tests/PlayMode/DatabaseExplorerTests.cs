@@ -28,6 +28,7 @@ namespace SysARchitect.Tests
             var simulation = Object.FindFirstObjectByType<SimulationController>();
             var selection = Object.FindFirstObjectByType<NodeSelectionController>();
             var node = graph.AddNode(NodeType.Database, new Vector3(0, .125f, -.5f));
+            var collapsedColliderSize = node.GetComponent<BoxCollider>().size;
             selection.Select(node.GetComponent<NodeVisual>());
             yield return null;
             Click("Replication");
@@ -61,7 +62,7 @@ namespace SysARchitect.Tests
             yield return null;
             Assert.That(visual.VisibleMemberCount, Is.Zero);
             Assert.That(node.GetComponent<MeshRenderer>().enabled, Is.True);
-            Assert.That(node.GetComponent<BoxCollider>().size.x, Is.EqualTo(.3f).Within(.001));
+            Assert.That(node.GetComponent<BoxCollider>().size, Is.EqualTo(collapsedColliderSize));
             Assert.That(GameObject.Find("Workspace UI/Toolbox/Components").GetComponentsInChildren<Button>()
                 .Count(b => b.GetComponentInChildren<TextMeshProUGUI>().text == "Database"), Is.EqualTo(1));
         }

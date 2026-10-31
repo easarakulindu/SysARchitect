@@ -17,11 +17,11 @@ namespace SysARchitect.Visualization
         /// <summary>Orange warning indicator.</summary>
         public static readonly Color Warning = new Color(1f, 0.7f, 0f, 1f);
 
-        /// <summary>Red for overloaded nodes.</summary>
-        public static readonly Color Overloaded = new Color(1f, 0.15f, 0.15f, 1f);
+        /// <summary>Amber for overloaded nodes.</summary>
+        public static readonly Color Overloaded = new Color(1f, 0.45f, 0.08f, 1f);
 
-        /// <summary>Dark grey for crashed nodes.</summary>
-        public static readonly Color Crashed = new Color(0.2f, 0.2f, 0.2f, 1f);
+        /// <summary>Pink/red for crashed nodes.</summary>
+        public static readonly Color Crashed = new Color(.95f, .12f, .3f, 1f);
 
         /// <summary>Slightly lighter grey for offline nodes.</summary>
         public static readonly Color Offline = new Color(0.3f, 0.3f, 0.35f, 1f);
@@ -40,8 +40,8 @@ namespace SysARchitect.Visualization
         /// <summary>Cyan for load balancer nodes.</summary>
         public static readonly Color LoadBalancer = new Color(0f, 0.8f, 0.8f, 1f);
 
-        /// <summary>Gold for cache nodes.</summary>
-        public static readonly Color Cache = new Color(1f, 0.85f, 0.1f, 1f);
+        /// <summary>Mint/teal for cache nodes.</summary>
+        public static readonly Color Cache = new Color(.3f, 1f, .8f, 1f);
 
         /// <summary>Docker blue for container nodes.</summary>
         public static readonly Color Container = new Color(0.1f, 0.6f, 0.9f, 1f);

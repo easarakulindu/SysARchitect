@@ -35,7 +35,7 @@ namespace SysARchitect.Desktop
 
         private float yaw;
         private float pitch = 45f;
-        private float distance = 2f;
+        private float distance = 2.4f;
         private Vector3 focusPoint = Vector3.zero;
 
         // Smoothing velocity trackers (used by SmoothDamp).
@@ -47,7 +47,7 @@ namespace SysARchitect.Desktop
         // Smoothed values applied each frame.
         private float smoothYaw;
         private float smoothPitch = 45f;
-        private float smoothDistance = 2f;
+        private float smoothDistance = 2.4f;
         private Vector3 smoothFocus = Vector3.zero;
 
         void Start()
@@ -92,7 +92,7 @@ namespace SysARchitect.Desktop
         {
             yaw = 0f;
             pitch = 45f;
-            distance = 2f;
+            distance = 2.4f;
             focusPoint = Vector3.zero;
         }
 

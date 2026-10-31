@@ -4533,7 +4533,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: SysARchitect.Runtime::SysARchitect.Interaction.NodePlacementController
   graph: {fileID: 1393634755}
-  defaultNodeMaterial: {fileID: 2100000, guid: bb9d65aac602873fda55f19be16a6b5b, type: 2}
+  defaultNodeMaterial: {fileID: 2100000, guid: 718d015284de8a0049e509ac64de03f8, type: 2}
   placementSurface:
     serializedVersion: 2
     m_Bits: 16
@@ -16810,7 +16810,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0833ecca3bb3d09b6a2deb9a483d39da, type: 3}
   m_Name: 
   m_EditorClassIdentifier: SysARchitect.Runtime::SysARchitect.Graph.ArchitectureGraph
-  defaultNodeMaterial: {fileID: 2100000, guid: bb9d65aac602873fda55f19be16a6b5b, type: 2}
+  defaultNodeMaterial: {fileID: 2100000, guid: 718d015284de8a0049e509ac64de03f8, type: 2}
   connectionMaterial: {fileID: 2100000, guid: 2dd742d1b19f1ab4b922f25544560bef, type: 2}
 --- !u!114 &1393634756
 MonoBehaviour:

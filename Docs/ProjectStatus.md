@@ -23,6 +23,13 @@ with a real material asset that retains its player shader variant. See
 [recovery, exact reproduction, test results and current build locations](Recovery2026-10-31.md).
 Do not mistake the current working-tree demo for a fully committed G milestone.
 
+**Model/indicator review:** the hardware models and monitoring presentation were
+isolated from mobile layout, reviewed and tested as a focused candidate. Fresh
+results: 85 Edit Mode and 31 Play Mode passed, plus a separate Linux player build
+and startup check. See [scope, remaining files and evidence-based feature status](ModelIndicatorReview.md).
+The current Android APK predates the gauge corrections; on-device AR remains
+unverified. The mobile-layout work is preserved outside this focused commit.
+
 **October 31 database-router correction:** the older `Linux-DatabaseDemo` was reproduced
 rejecting Backend > LB and having no routing-role controls. The newer routing build accepts
 the architecture after explicit role selection. Current delivery uses `./RunDesktopDemo.sh`

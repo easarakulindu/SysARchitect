@@ -41,7 +41,8 @@ namespace SysARchitect.Tests
             var backend = graph.AddNode(NodeType.Backend, new Vector3(0, .2f, 0));
             var database = graph.AddNode(NodeType.Database, new Vector3(.4f, .125f, 0));
             Assert.That(frontend.GetComponent<Collider>(), Is.Not.Null);
-            Assert.That(frontend.GetComponent<Renderer>().sharedMaterial.shader.name, Does.Contain("Universal Render Pipeline"));
+            Assert.That(frontend.GetComponent<Renderer>().sharedMaterial.shader.name, Is.EqualTo("SysARchitect/HolographicHardware"));
+            Assert.That(frontend.GetComponent<Renderer>().sharedMaterial.shader.isSupported, Is.True);
             Assert.That(graph.ValidateConnection(frontend, database).isValid, Is.False);
             var connection = graph.AddConnection(frontend, backend);
             Assert.That(connection, Is.Not.Null);

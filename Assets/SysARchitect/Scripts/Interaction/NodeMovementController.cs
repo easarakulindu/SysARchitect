@@ -16,7 +16,7 @@ namespace SysARchitect.Interaction
         {
             var visual = selectionController.SelectedNode;
             if (visual == null || visual.GetGraphNode().HostNodeId != null) return;
-            float height = visual.GetComponent<MeshFilter>().sharedMesh.bounds.extents.y * visual.transform.lossyScale.y;
+            float height = -visual.GetComponent<MeshFilter>().sharedMesh.bounds.min.y * visual.transform.lossyScale.y;
             visual.transform.position = point + normal * height;
         }
         [SerializeField] private Camera mainCamera;

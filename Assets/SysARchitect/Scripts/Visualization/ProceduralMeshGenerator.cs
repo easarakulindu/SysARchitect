@@ -1,6 +1,7 @@
 namespace SysARchitect.Visualization
 {
     using UnityEngine;
+    using System.Collections.Generic;
     using SysARchitect.Core;
 
     /// <summary>
@@ -29,8 +30,80 @@ namespace SysARchitect.Visualization
                 case NodeType.Container:      return GenerateContainer();
                 case NodeType.KubernetesNode: return GenerateKubernetesNode();
                 case NodeType.KubernetesPod:  return GenerateKubernetesPod();
+                case NodeType.DockerHost: return GenerateBox(.52f, .2f, .36f, "DockerHost");
+                case NodeType.KubernetesCluster: return GenerateCylinder(6, .26f, .36f, "KubernetesCluster");
                 default:                      return GenerateBackend();
             }
+        }
+
+        /// <summary>One draw, flat faces, authored hardware details and vertex-coded shell/panel/light regions.</summary>
+        public static Mesh GenerateHolographicMesh(NodeType type)
+        {
+            var vertices = new List<Vector3>(); var normals = new List<Vector3>();
+            var colors = new List<Color>(); var uv = new List<Vector2>(); var triangles = new List<int>();
+            var shell = new Color(.22f, .34f, .46f, 1);
+            var panel = new Color(.018f, .035f, .065f, 0);
+            var glow = Color.white;
+            void Append(Mesh part, Vector3 offset, Color color)
+            {
+                int first = vertices.Count;
+                foreach (var vertex in part.vertices) vertices.Add(vertex + offset);
+                normals.AddRange(part.normals); uv.AddRange(part.uv);
+                for (int i = 0; i < part.vertexCount; i++) colors.Add(color);
+                foreach (int index in part.triangles) triangles.Add(first + index);
+                if (Application.isPlaying) Object.Destroy(part); else Object.DestroyImmediate(part);
+            }
+            void Box(Vector3 size, Vector3 at, Color color) => Append(GenerateBox(size.x, size.y, size.z, "Hardware detail"), at, color);
+            void Ring(float radius, float y) => Append(GenerateCylinder(16, radius, .012f, "Storage band"), new Vector3(0, y, 0), glow);
+            Append(GenerateMesh(type), Vector3.zero, shell);
+            switch (type)
+            {
+                case NodeType.Frontend:
+                    Box(new Vector3(.35f, .23f, .012f), new Vector3(0, 0, .03f), panel);
+                    Box(new Vector3(.28f, .012f, .014f), new Vector3(0, -.09f, .039f), glow);
+                    Box(new Vector3(.045f, .065f, .04f), new Vector3(0, -.175f, 0), shell);
+                    Box(new Vector3(.2f, .014f, .11f), new Vector3(0, -.21f, 0), glow); break;
+                case NodeType.Backend:
+                    Box(new Vector3(.13f, .35f, .012f), new Vector3(0, 0, .08f), panel);
+                    for (int i = 0; i < 4; i++) Box(new Vector3(.095f, .012f, .016f), new Vector3(0, -.12f + i * .075f, .09f), glow);
+                    Box(new Vector3(.17f, .015f, .17f), new Vector3(0, -.2f, 0), shell); break;
+                case NodeType.Database:
+                    Ring(.156f, -.11f); Ring(.156f, 0); Ring(.156f, .11f);
+                    Append(GenerateCylinder(16, .12f, .008f, "Storage lid"), new Vector3(0, .13f, 0), panel); break;
+                case NodeType.LoadBalancer:
+                    Box(new Vector3(.23f, .014f, .15f), new Vector3(0, .055f, 0), panel);
+                    for (int i = 0; i < 3; i++) Box(new Vector3(.027f, .018f, .06f), new Vector3((i - 1) * .065f, .069f, 0), glow);
+                    Box(new Vector3(.014f, .12f, .014f), new Vector3(.13f, .095f, -.06f), glow); break;
+                case NodeType.Cache:
+                    Box(new Vector3(.15f, .014f, .15f), new Vector3(0, .066f, 0), panel);
+                    for (int i = 0; i < 4; i++)
+                        foreach (int side in new[] { -1, 1 }) Box(new Vector3(.05f, .012f, .018f), new Vector3(side * .115f, -.025f, -.066f + i * .044f), glow);
+                    Box(new Vector3(.07f, .018f, .07f), new Vector3(0, .08f, 0), glow); break;
+                case NodeType.Container:
+                    Box(new Vector3(.22f, .13f, .008f), new Vector3(0, 0, .079f), panel);
+                    for (int i = 0; i < 5; i++) Box(new Vector3(.009f, .13f, .012f), new Vector3(-.1f + i * .05f, 0, .088f), glow); break;
+                case NodeType.KubernetesNode:
+                    Box(new Vector3(.2f, .012f, .2f), new Vector3(0, .08f, 0), panel);
+                    for (int i = 0; i < 3; i++) Box(new Vector3(.13f, .012f, .022f), new Vector3(0, .095f, -.06f + i * .06f), glow); break;
+                case NodeType.KubernetesPod:
+                    Box(new Vector3(.075f, .06f, .008f), new Vector3(0, .005f, .054f), panel);
+                    Box(new Vector3(.07f, .01f, .07f), new Vector3(0, .055f, 0), glow);
+                    Box(new Vector3(.012f, .045f, .012f), new Vector3(0, .08f, 0), glow); break;
+                case NodeType.DockerHost:
+                    Box(new Vector3(.48f, .16f, .012f), new Vector3(0, 0, .185f), panel);
+                    for (int i = 0; i < 4; i++) Box(new Vector3(.08f, .018f, .012f), new Vector3(-.18f + i * .12f, 0, .198f), glow);
+                    Box(new Vector3(.54f, .014f, .38f), new Vector3(0, -.105f, 0), glow); break;
+                case NodeType.KubernetesCluster:
+                    for (int i = 0; i < 3; i++)
+                    {
+                        Box(new Vector3(.28f, .065f, .018f), new Vector3(0, -.11f + i * .11f, .23f), panel);
+                        Box(new Vector3(.21f, .012f, .022f), new Vector3(0, -.11f + i * .11f, .245f), glow);
+                    }
+                    Ring(.27f, -.18f); break;
+            }
+            var mesh = new Mesh { name = type + " Holographic Hardware" };
+            mesh.SetVertices(vertices); mesh.SetNormals(normals); mesh.SetColors(colors); mesh.SetUVs(0, uv);
+            mesh.SetTriangles(triangles, 0); mesh.RecalculateBounds(); return mesh;
         }
 
         // ────────────────────────────────────────────────────────────────

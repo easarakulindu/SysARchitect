@@ -22,7 +22,7 @@ namespace SysARchitect.Interaction
         public bool PlaceOnSurface(Vector3 point, Vector3 normal)
         {
             if (!pendingNodeType.HasValue || previewObject == null) return false;
-            float height = previewObject.GetComponent<MeshFilter>().sharedMesh.bounds.extents.y * graph.transform.lossyScale.y;
+            float height = -previewObject.GetComponent<MeshFilter>().sharedMesh.bounds.min.y * graph.transform.lossyScale.y;
             FinalizePlacement(point + normal * height);
             return true;
         }
@@ -55,7 +55,7 @@ namespace SysARchitect.Interaction
             // Build preview object with the correct procedural mesh.
             previewObject = new GameObject($"Preview_{type}");
             var meshFilter = previewObject.AddComponent<MeshFilter>();
-            meshFilter.mesh = ProceduralMeshGenerator.GenerateMesh(type);
+            meshFilter.mesh = ProceduralMeshGenerator.GenerateHolographicMesh(type);
 
             var meshRenderer = previewObject.AddComponent<MeshRenderer>();
 
@@ -132,7 +132,7 @@ namespace SysARchitect.Interaction
                 }
 
                 previewObject.transform.position = hit.point + Vector3.up *
-                    previewObject.GetComponent<MeshFilter>().sharedMesh.bounds.extents.y;
+                    -previewObject.GetComponent<MeshFilter>().sharedMesh.bounds.min.y;
 
                 // Finalise on left-click.
                 if (Input.GetMouseButtonDown(0))
