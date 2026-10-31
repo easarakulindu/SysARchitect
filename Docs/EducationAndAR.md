@@ -218,3 +218,48 @@ Linux build `0.7.0-guided-lessons` succeeded (108,817,837 bytes), log
 `/tmp/sysarchitect-lessons-linux-build.log`. The prior C checkpoint is preserved in
 `Builds/Linux-Kubernetes`. Local completion is implemented; quizzes and score
 persistence follow in E. No learning improvement or user-testing results are claimed.
+
+## E — Pre/post quizzes and local progress
+
+The guide adds Pre-quiz, Post-quiz and Scores / Progress summary. The bank contains
+20 original multiple-choice questions, four per lesson, including scenarios about
+disconnected graphs, bottlenecks, failover, database roles/lag/sharding/cache hits,
+container isolation and deployment recovery versus scaling. Pre and post each use
+10 questions (two per module), with disjoint fixed forms. Use pre before the
+lessons and post afterwards. The forms are practice instruments; their scores do
+not constitute a controlled measurement of learning effectiveness.
+
+Every answer reveals correct reasoning. Answered items cannot be resubmitted and
+unanswered items cannot advance. Only completed attempts are saved, immediately
+after the final answer; closing an incomplete quiz creates no score. Quiz input
+pauses simulation and suspends desktop/touch graph editing, then restores the
+prior input ownership on close. The architecture is retained and simulation
+stays paused until Run/Step. Escape/back also closes the quiz.
+
+Local progress extends the existing versioned JSON record, preserving D's lesson
+completion. Each saved attempt includes form stage, question IDs, actual choices,
+recomputed correct/total and UTC completion time. Stored answer IDs/indices are
+validated; scores are derived from the answer key instead of trusting stored
+totals. The latest 20 completed attempts are retained. Summary shows five module
+completion states and the latest real pre/post scores; missing quizzes show
+"not taken", not a fabricated zero or baseline. There is no cloud sync or user
+study data. Test profiles use in-memory storage.
+
+Files: `Quiz/QuizCatalog.cs`, `QuizSession.cs`, extended
+`Lessons/LearningProgress.cs`, `UI/QuizUI.cs`, `Editor/QuizSceneSetup.cs`, both
+workspace extensions and quiz/persistence/input-restore regression tests.
+
+Validation: **66 Edit Mode and 28 Play Mode cases passed**. Coverage includes all
+bank/form constraints, answer gating, double submission, scoring, completed-only
+and once-only persistence, score recomputation, old-record compatibility, bounded
+history, both full UI forms, summary values and input restoration after an
+unfinished attempt. Results `/tmp/sysarchitect-quiz-core.xml` and
+`/tmp/sysarchitect-quiz-play.xml`, with same-basename logs. Inspected captures:
+`/tmp/sysarchitect-quiz-feedback.png` and `/tmp/sysarchitect-progress-summary.png`.
+Those screenshots use scripted in-memory test answers (9/10 pre, 10/10 post),
+not real learner results or evidence of improvement; the application is not seeded
+with those scores.
+Linux build `0.8.0-quizzes-progress` passed (108,864,989 bytes), log
+`/tmp/sysarchitect-quiz-linux-build.log`. The prior D build is preserved in
+`Builds/Linux-Lessons`. Remaining checks include physical mobile input and device
+AR; no external deployment success is claimed. Next priority: F platform builds.
