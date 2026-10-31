@@ -163,3 +163,58 @@ the same-basename logs record execution. The inspected rendering is
 `Builds/Linux-Docker`; the stable launcher remains `Builds/Linux-Current`.
 Remaining scope limits: bounded scheduler/readiness abstraction, no actual
 Kubernetes cluster or HPA. Next priority: D guided lessons.
+
+## D — Five guided learning modules
+
+Lessons / Progress in the toolbox opens a scrollable guide. Next lesson cycles
+through client-server, load balancing/scaling, database replication/sharding,
+Docker images/instances and Kubernetes orchestration/recovery. Each definition
+contains measurable objectives, a short undergraduate-level explanation, four
+practical steps, a conceptual algorithm and a challenge. Previous/Next step
+changes the guidance; it never drives fake traffic or controller outcomes.
+
+Load example is explicitly labelled as clearing the workspace. It pauses and
+resets the existing simulation and builds an editable scenario with actual graph
+nodes/controllers. Existing user architectures can also be used without loading
+an example. AR examples are gated until a workspace is placed/tracked. Close the
+guide to use the normal builder and resource panels, then reopen it for the next
+step. The highlighted algorithm follows actual typed transfer/outcome events,
+database pending copies, container state/configuration and deployment actions.
+Explicit writes use their real transfer kind, not a request-ID guess.
+
+Check challenge evaluates measured state before saving local completion:
+
+- Client-server: actual directed three-tier path, 20 new successes and DB reads/writes.
+- Load balancing: two backend targets with storage, at least 20 operations at each,
+  100 new successes, observed routing to a healthy target while another was crashed,
+  then both operational again.
+- Database: primary writes, replica reads and pending-copy lag, then at least three
+  shards with records on multiple partitions of that same Database.
+- Docker: two operational instances of one image, changed limit, observed stop/start,
+  crash and same-instance recovery with subsequent work, and 20 new successes.
+- Kubernetes: explicit target change to three, actual new-identity failure replacement,
+  three ready replicas and 20 new successes.
+
+Incomplete challenges display the missing action. Prior request counters are
+excluded from newly selected lessons. Reset clears practice observations, while
+already completed lessons remain saved locally. The PlayerPrefs JSON store uses
+a versioned application-specific key; tests inject an in-memory store and do not
+overwrite the developer's progress. No user study or learning gain is asserted.
+
+Files: `Lessons/LessonCatalog.cs`, `LessonController.cs`, `LearningProgress.cs`,
+`UI/LessonUI.cs`, `Editor/LessonSceneSetup.cs`, both workspace extensions and
+lesson/persistence regression tests.
+
+Validation: **62 Edit Mode and 26 Play Mode cases passed**. Five end-to-end
+challenge tests verify the actual simulation actions and reject premature
+completion; persistence tests cover round-trip, duplicates, corrupted/unknown
+data and complete module content. Results `/tmp/sysarchitect-lessons-core.xml`
+and `/tmp/sysarchitect-lessons-play.xml`; rendering
+`/tmp/sysarchitect-learning-guide.png` was inspected. UI canvas order was corrected
+so world labels stay behind the readable guide. One core invocation was externally
+terminated before tests and produced no results; a fresh run completed successfully
+(interrupted log `/tmp/sysarchitect-lessons-core-interrupted.log`).
+Linux build `0.7.0-guided-lessons` succeeded (108,817,837 bytes), log
+`/tmp/sysarchitect-lessons-linux-build.log`. The prior C checkpoint is preserved in
+`Builds/Linux-Kubernetes`. Local completion is implemented; quizzes and score
+persistence follow in E. No learning improvement or user-testing results are claimed.
