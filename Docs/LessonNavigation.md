@@ -65,6 +65,37 @@ sample InteractableMat materials are excluded from this feature commit.
 
 ## Android delivery
 
-Mobile version is now **0.11.1** so this correction can be distinguished from
-0.11.0 during installation. Build outcome and the verified APK path/hash will be
-recorded after the tested feature is committed and Android packaging succeeds.
+Mobile version is **0.11.1**, built successfully from local feature commit
+**bca6ef6e9ccf37d0559b07f25f443c6a72b7dcd6**, UTC 2026-11-01T07:27:27Z.
+
+- APK: **`Builds/Android-LessonNavigation/SysARchitect.apk`**, 35,873,394 bytes.
+- SHA-256: `e2b5e9ba92927c24e2fd26c61bc7b45e4e6797c039ee3390e9614c301a0ca6e1`.
+- BUILD-INFO.txt records source revision, Unity 6000.6.5f1, AR scene and dependency
+  hash `3b5422df1a9b8763cdaef2b5624ccea0`.
+- aapt verified com.easara.sysarchitect, versionName 0.11.1, min API 26 / target
+  36, optional ARCore and no required camera.ar feature. ZIP libraries are ARM64
+  only; apksigner verification passed with the local Android Debug certificate.
+- Inspection of the packaged level0 data confirms Previous lesson, Lessons,
+  Lesson selection and Lesson choice 5 are in the built mobile scene.
+
+Build and package/signature evidence is in `Builds/LessonNavigationEvidence`.
+The larger Unity build total includes native backup files and is not the delivered
+APK's size. The earlier 0.11.0 APK and all Linux binaries/launchers are unchanged;
+Linux binaries were not rebuilt for this navigation correction. Desktop source
+and scene behavior were verified in Play Mode. No remote push or publication.
+
+ADB had no connected device. Install on the phone with USB debugging authorized,
+from the project root (this updates the existing app without requesting data removal):
+
+```sh
+adb_tool=/home/easara/Unity/Hub/Editor/6000.6.5f1/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb
+"$adb_tool" devices -l
+"$adb_tool" install -r Builds/Android-LessonNavigation/SysARchitect.apk
+"$adb_tool" shell am start -n com.easara.sysarchitect/com.unity3d.player.UnityPlayerGameActivity
+```
+
+The prior API 26+/ARM64/GLES 3.1 requirements and Virtual Workspace remain. Verify
+0.11.1 in the app, open Lessons / Progress, navigate forward/backward through
+topics and instruction steps, choose a nonadjacent topic through Lessons, and
+confirm saved completions and quiz scores remain after reopening the app.
+This physical acceptance check has not been performed here.

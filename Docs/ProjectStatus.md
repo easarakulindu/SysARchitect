@@ -8,6 +8,10 @@ controls. All five topics can be revisited in the picker; completion/quiz storag
 and the current graph/simulation are retained. Verified 91 Edit Mode / 44 Play
 Mode passes, plus final focused navigation checks and four mobile resolutions.
 See [navigation design, regression evidence and Android delivery](LessonNavigation.md).
+Feature commit `bca6ef6` has a verified **0.11.1** APK at
+`Builds/Android-LessonNavigation/SysARchitect.apk`; packaged navigation controls,
+manifest and signing checks passed. Earlier APK/Linux artifacts are preserved.
+The correction still needs a physical phone retest; no device was connected here.
 
 **Current approved work:** the October 31 educational/AR request authorizes milestones
 A–G and supersedes the earlier AR hold. See [Educational and AR delivery](EducationAndAR.md)

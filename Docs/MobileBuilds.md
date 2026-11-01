@@ -1,9 +1,11 @@
 # Mobile builds and device handoff
 
-**Current verified delivery (November 1):** version **0.11.0**,
-`Builds/Android-RC1/SysARchitect.apk`, with optional ARCore and labelled non-AR
-Virtual Workspace. The earlier default-path APK was preserved. Use the RC1 APK
-for testing; see [build evidence, exact ADB commands and limits](MobileRecovery2026-11-01.md).
+**Current verified Android delivery (November 1):** version **0.11.1**,
+`Builds/Android-LessonNavigation/SysARchitect.apk`, with backward topic/step
+navigation, a lesson picker, optional ARCore and labelled non-AR Virtual Workspace.
+See [navigation/build evidence and exact installation command](LessonNavigation.md).
+The 0.11.0 RC1 APK, earlier default-path APK and Linux demos remain preserved; see the
+[earlier cross-platform build evidence and Mac/device limits](MobileRecovery2026-11-01.md).
 The packaged APK requires GLES 3.1 in addition to API 26+ and ARM64. No phone was
 connected during verification.
 
