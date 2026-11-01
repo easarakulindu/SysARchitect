@@ -52,7 +52,7 @@ import worker to reduce load after the host crash. No root editor was commandeer
 - Play Mode: **47 passed, 0 failed** (`sysarchitect-step-content-playmode.xml`),
   including all existing desktop, graph/routing, resource, education and AR-adapter
   regressions. The final test run also checks visible explanation text, not only
-  headings and instruction indices. Android delivery follows this verified source.
+  headings and instruction indices. Android delivery below was built from this verified source.
 - The new mobile fixture exercises all five topics, all four instructions forward
   and backward, both boundaries, switching/revisiting and explicit bottom-to-top
   scroll restoration at 1280×720, 1920×1080, 2400×1080 and 2796×1290. The latter
@@ -74,3 +74,72 @@ desktop source behavior is tested in Unity rather than claiming a new Linux buil
 No physical Android retest, AR tracking verification or device performance profile
 is claimed. After installation, verify all five topics and steps on the Redmi,
 close/reopen the application and confirm prior completion/quiz results remain.
+
+## Local Android build resource controls
+
+The first post-test Android attempt was deliberately cancelled during native
+compilation: Unity's job/import limits and CPU affinity did not limit Bee's
+separate compiler pool, which launched 24 jobs. This was an interrupted build,
+not a passing build or a code/test failure. Its log is retained. The same cached
+build was restarted with the installed Bee backend's `BEE_BUILD_THREADS=2` control;
+process inspection confirmed two native compiler jobs and one Unity process.
+Unity still passes its own `-Xmx4096m` maximum heap argument to Gradle; the
+`GRADLE_OPTS` heap setting below did not override that argument. The JVM processor
+count and CPU affinity controls remained in effect.
+No cache or project work was deleted. The build helper restored its temporary
+version/input settings when the cancelled attempt exited.
+
+Build environment for this handoff (only in the isolated validation project):
+
+```sh
+SYSARCHITECT_BUILD_REVISION=e556a6f4cc52977f55a247ba889adf1718254b57 \
+BEE_BUILD_THREADS=2 JAVA_TOOL_OPTIONS=-XX:ActiveProcessorCount=2 \
+GRADLE_OPTS='-Dorg.gradle.workers.max=2 -Dorg.gradle.parallel=false -Dorg.gradle.jvmargs=-Xmx2048m' \
+taskset -c 0,1 /home/easara/Unity/Hub/Editor/6000.6.5f1/Editor/Unity \
+  -batchmode -quit -job-worker-count 2 -import-worker-count 1 \
+  -projectPath /tmp/SysARchitectValidation -buildTarget Android \
+  -executeMethod SysARchitect.Editor.MobileBuild.BuildAndroid \
+  -logFile /tmp/sysarchitect-step-content-android-limited.log
+```
+
+## Verified Android delivery
+
+- **0.11.2**, package `com.easara.sysarchitect`, versionCode 1.
+- **`Builds/Android-StepContent/SysARchitect.apk`**, **35,878,130 bytes**.
+- SHA-256: `2c65e89ec4ffff013b3cc35f4c30224987391f92f44cb18f03a7f8883abbdf0a`.
+- Source feature commit **`e556a6f4cc52977f55a247ba889adf1718254b57`**.
+- Unity exited **0**; BUILD-INFO records UTC **2026-11-01T08:54:15Z** and
+  AR scene dependency hash `3b5422df1a9b8763cdaef2b5624ccea0`.
+- `apksigner verify --print-certs` succeeded: local **Android Debug** certificate,
+  SHA-256 `f8b23b34451fa9109fef5831bea70a74e6a6e148c33c96e4270805f91e2214f1`,
+  matching 0.11.1. This is a signed local testing APK, not store-release signing.
+- aapt verified API 26 minimum / 36 target, GLES 3.1, optional ARCore and no required
+  `android.hardware.camera.ar`. Native libraries are ARM64 only.
+- ZIP inspection verified **all 20 headings and 20 explanations** in the packaged
+  IL2CPP metadata, preventing accidental delivery of the old lesson code.
+- Actual build log: `Builds/LessonStepContentEvidence/sysarchitect-step-content-android-limited.log`.
+  XML, screenshots, signing/manifest output, verification script and BUILD-INFO are
+  retained beside it. Unity's 843,772,100-byte build total includes native backup
+  files; it is not the delivered APK size.
+
+The prior `Builds/Android-LessonNavigation/SysARchitect.apk` was hash-verified
+unchanged. All older APKs, Linux builds and launchers were left in place.
+ADB reported no connected device; no physical install or device retest was run.
+
+Install with USB debugging enabled and the computer authorized, from the project
+root, using **replace/update** rather than uninstalling so existing app data stays:
+
+```sh
+adb_tool=/home/easara/Unity/Hub/Editor/6000.6.5f1/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb
+"$adb_tool" devices -l
+"$adb_tool" install -r Builds/Android-StepContent/SysARchitect.apk
+"$adb_tool" shell am start -n com.easara.sysarchitect/com.unity3d.player.UnityPlayerGameActivity
+```
+
+On the Redmi Note 13 4G, confirm version 0.11.2, enter labelled **Virtual Workspace**,
+open Lessons / Progress and check changing headings/instructions/explanations with
+Next step and Previous step in all five topics. Scroll down then change a step:
+the new instruction should return to the top. Switch/revisit topics through Lessons,
+then restart the app and check prior quiz scores/completions. True AR still requires
+a supported device; these editor checks and non-AR acceptance are not physical AR
+verification. Load example remains an explicit workspace-replacing action.

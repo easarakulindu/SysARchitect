@@ -1,13 +1,13 @@
 # Mobile builds and device handoff
 
-**Current verified Android delivery (November 1):** version **0.11.1**,
-`Builds/Android-LessonNavigation/SysARchitect.apk`, with backward topic/step
-navigation, a lesson picker, optional ARCore and labelled non-AR Virtual Workspace.
-See [navigation/build evidence and exact installation command](LessonNavigation.md).
-The 0.11.0 RC1 APK, earlier default-path APK and Linux demos remain preserved; see the
-[earlier cross-platform build evidence and Mac/device limits](MobileRecovery2026-11-01.md).
-The packaged APK requires GLES 3.1 in addition to API 26+ and ARM64. No phone was
-connected during verification.
+**Current verified Android delivery (November 1):** version **0.11.2**,
+`Builds/Android-StepContent/SysARchitect.apk`, correcting step-specific visible
+lesson content while retaining topic navigation, optional ARCore and labelled
+non-AR Virtual Workspace. **96 Edit Mode / 47 Play Mode tests passed.**
+See [root cause, build/signature evidence and installation command](LessonStepContent.md).
+The 0.11.1/0.11.0 APKs and Linux demos remain preserved. The packaged APK requires
+GLES 3.1, API 26+ and ARM64. No physical retest is claimed; ADB had no connected
+device. Historical platform setup and Mac/device limitations follow.
 
 Use Unity **6000.6.5f1** (revision 3ff58d469c8a), including its matching platform
 modules. Keep Packages/manifest.json and packages-lock.json: AR Foundation,

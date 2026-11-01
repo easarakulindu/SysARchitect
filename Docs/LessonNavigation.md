@@ -1,5 +1,10 @@
 # Lesson navigation correction — November 1, 2026
 
+**Follow-up:** physical Android testing of 0.11.1 found that changing step content
+was buried below static text. See [the 0.11.2 presentation correction and current APK](LessonStepContent.md).
+This document retains the original topic-navigation implementation/build record.
+
+
 ## Cause and design
 
 The developer reported the missing return path during physical Android testing.

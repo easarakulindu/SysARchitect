@@ -8,8 +8,10 @@ instructions and explanations above static overview text. Navigation restores
 scroll position and updates existing component/link focus without simulation
 actions. Fresh Unity results: **96 Edit Mode / 47 Play Mode passed**; all five
 lessons checked at four phone resolutions. See [root cause and verification](LessonStepContent.md).
-Android 0.11.2 packaging is the next verification step; the 0.11.1 APK below is
-preserved as the previous delivery.
+Verified signed **0.11.2** APK: `Builds/Android-StepContent/SysARchitect.apk`,
+built from local feature commit `e556a6f`. Version/manifest/signature and all 20
+packaged step headings/explanations checked; ADB has no connected device. Prior
+APKs and Linux demos are preserved. Physical retest remains pending.
 
 **Mobile lesson navigation correction (November 1):** the guide now has separate
 Previous lesson / Lessons / Next lesson controls and bounded instruction-step
