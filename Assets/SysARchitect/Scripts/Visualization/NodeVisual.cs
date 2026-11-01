@@ -29,6 +29,7 @@ namespace SysARchitect.Visualization
         // ── Visual state ───────────────────────────────────────────────
         bool m_IsSelected;
         public bool IsSelected => m_IsSelected;
+        public bool IsLessonFocused { get; private set; }
         NodeStatus m_CurrentStatus = NodeStatus.Healthy;
         bool m_IsDirty;
 
@@ -89,6 +90,11 @@ namespace SysARchitect.Visualization
             if (m_IsSelected == selected) return;
             m_IsSelected = selected;
             m_IsDirty = true;
+        }
+        public void SetLessonFocus(bool focused)
+        {
+            if (IsLessonFocused == focused) return;
+            IsLessonFocused = focused; m_IsDirty = true;
         }
 
         /// <summary>Updates the status colour on the node enclosure.</summary>
@@ -199,6 +205,7 @@ namespace SysARchitect.Visualization
             Color emission;
             if (m_CurrentStatus == NodeStatus.Overloaded)
                 statusColor *= .7f + .3f * Mathf.Sin(Time.unscaledTime * 2f);
+            if (IsLessonFocused && m_CurrentStatus == NodeStatus.Healthy) statusColor = Color.Lerp(statusColor, new Color(.3f, 1, .65f), .65f);
             if (m_IsSelected) statusColor = Color.Lerp(statusColor, NodeColorPalette.Selected, .5f);
             if (m_Label != null)
             {
@@ -207,7 +214,7 @@ namespace SysARchitect.Visualization
                 if (m_GraphNode.Type == NodeType.LoadBalancer)
                     name += m_GraphNode.RoutingRole == LoadBalancerRole.Database ? "\nDB Router" : "\nApp LB";
                 m_Label.text = m_CurrentStatus == NodeStatus.Healthy ? name : $"{name}\n{m_CurrentStatus}";
-                m_Label.color = m_IsSelected ? NodeColorPalette.Selected : m_CurrentStatus == NodeStatus.Healthy ? Color.white : statusColor;
+                m_Label.color = m_IsSelected ? NodeColorPalette.Selected : m_CurrentStatus == NodeStatus.Healthy ? IsLessonFocused ? new Color(.3f, 1, .65f) : Color.white : statusColor;
             }
 
             if (m_IsSelected)

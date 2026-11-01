@@ -25,6 +25,25 @@ namespace SysARchitect.Tests
             store.Json = "{\"version\":1,\"completedLessons\":[\"Docker\",\"Docker\",\"Invented\"]}";
             Assert.That(new LearningProgress(store).CompletedCount, Is.EqualTo(1));
         }
+        [TestCase(LessonId.ClientServer)]
+        [TestCase(LessonId.LoadBalancing)]
+        [TestCase(LessonId.Database)]
+        [TestCase(LessonId.Docker)]
+        [TestCase(LessonId.Kubernetes)]
+        public void EachInstructionHasDistinctPresentationAndExistingComponentFocus(LessonId id)
+        {
+            var lesson = LessonCatalog.Get(id);
+            Assert.That(lesson.StepDetails.Count, Is.EqualTo(lesson.Steps.Count));
+            Assert.That(lesson.StepDetails.Select(s => s.Heading).Distinct().Count(), Is.EqualTo(lesson.Steps.Count));
+            Assert.That(lesson.StepDetails.Select(s => s.Explanation).Distinct().Count(), Is.EqualTo(lesson.Steps.Count));
+            foreach (var detail in lesson.StepDetails)
+            {
+                Assert.That(detail.Heading, Is.Not.Empty);
+                Assert.That(detail.Explanation.Length, Is.GreaterThan(100));
+                Assert.That(detail.FocusTypes, Is.Not.Empty);
+                Assert.That(detail.FocusTypes.All(t => System.Enum.IsDefined(typeof(SysARchitect.Core.NodeType), t)), Is.True);
+            }
+        }
         [Test]
         public void AllFiveModulesHaveObjectivesStepsAlgorithmsAndChallenges()
         {

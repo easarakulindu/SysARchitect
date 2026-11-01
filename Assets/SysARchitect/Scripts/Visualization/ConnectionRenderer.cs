@@ -32,15 +32,17 @@ namespace SysARchitect.Visualization
         Color activityColor;
         float activityUntil;
         public bool IsSelected => selected;
+        public bool IsLessonFocused { get; private set; }
         public string LastActivity { get; private set; } = "No traffic yet";
         public void SetSelected(bool value) { selected = value; ApplyStyle(); }
+        public void SetLessonFocus(bool value) { IsLessonFocused = value; ApplyStyle(); }
         public void ShowActivity(Color color, string description)
         { activityColor = color; activityUntil = Time.unscaledTime + .7f; LastActivity = description; ApplyStyle(); }
         private void ApplyStyle()
         {
             if (m_LineRenderer == null) return;
-            m_LineRenderer.widthMultiplier = (selected ? .026f : k_LineWidth) * m_SourceTransform.lossyScale.x;
-            m_LineMaterialInstance.color = selected ? new Color(1, .85f, .1f) : Time.unscaledTime < activityUntil ? activityColor : new Color(.15f, .7f, .95f);
+            m_LineRenderer.widthMultiplier = (selected ? .026f : IsLessonFocused ? .021f : k_LineWidth) * m_SourceTransform.lossyScale.x;
+            m_LineMaterialInstance.color = selected ? new Color(1, .85f, .1f) : Time.unscaledTime < activityUntil ? activityColor : IsLessonFocused ? new Color(.3f, 1, .65f) : new Color(.15f, .7f, .95f);
         }
 
         // ────────────────────────────────────────────────────────────────

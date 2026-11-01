@@ -2,6 +2,15 @@
 
 Target demonstration: November 2, 2026. No remote pushes are authorized.
 
+**Lesson step-content correction (November 1):** recovered the interrupted edits,
+reproduced the unchanged-viewport failure, and moved distinct step headings,
+instructions and explanations above static overview text. Navigation restores
+scroll position and updates existing component/link focus without simulation
+actions. Fresh Unity results: **96 Edit Mode / 47 Play Mode passed**; all five
+lessons checked at four phone resolutions. See [root cause and verification](LessonStepContent.md).
+Android 0.11.2 packaging is the next verification step; the 0.11.1 APK below is
+preserved as the previous delivery.
+
 **Mobile lesson navigation correction (November 1):** the guide now has separate
 Previous lesson / Lessons / Next lesson controls and bounded instruction-step
 controls. All five topics can be revisited in the picker; completion/quiz storage

@@ -6,6 +6,7 @@ using SysARchitect.Core;
 using SysARchitect.Graph;
 using SysARchitect.Interaction;
 using SysARchitect.Simulation;
+using SysARchitect.Visualization;
 
 namespace SysARchitect.Lessons
 {
@@ -25,12 +26,31 @@ namespace SysARchitect.Lessons
         public LessonDefinition Current { get; private set; } = LessonCatalog.All[0];
         public LearningProgress Progress { get; private set; }
         public int ActiveAlgorithmLine { get; private set; }
+        private int instructionFocus = -1;
+        public void SetInstructionFocus(int index)
+        {
+            if (instructionFocus == index) return;
+            instructionFocus = index >= 0 && index < Current.StepDetails.Count ? index : -1;
+            foreach (var node in graph.Nodes) FocusNode(node);
+            foreach (var edge in graph.Connections) FocusConnection(edge);
+        }
+        private bool FocusType(NodeType type) => instructionFocus >= 0 && Current.StepDetails[instructionFocus].FocusTypes.Contains(type);
+        private void FocusNode(GraphNode node)
+        {
+            if (node != null && node.TryGetComponent<NodeVisual>(out var visual)) visual.SetLessonFocus(FocusType(node.Type));
+        }
+        private void FocusConnection(GraphConnection edge)
+        {
+            if (edge != null && edge.Source != null && edge.Target != null && edge.TryGetComponent<ConnectionRenderer>(out var visual))
+                visual.SetLessonFocus(FocusType(edge.Source.Type) && FocusType(edge.Target.Type));
+        }
         public string Feedback { get; private set; } = "Choose a lesson. Load example explicitly replaces the current workspace; otherwise use your existing architecture.";
         private void Awake() => Progress = new LearningProgress(new PlayerPrefsProgressStorage());
         public void UseProgress(IProgressStorage storage) => Progress = new LearningProgress(storage);
         private void OnEnable()
         {
             graph.OnNodeAdded += NodeAdded; graph.OnNodeRemoved += NodeRemoved;
+            graph.OnConnectionAdded += FocusConnection;
             simulation.Engine.OnTransferPath += Transferred; simulation.Engine.OnRequestFinished += Finished;
             simulation.OnBeforeTick += BeforeTick;
             simulation.OnSimulationReset += ResetSession;
@@ -38,6 +58,8 @@ namespace SysARchitect.Lessons
         private void OnDisable()
         {
             graph.OnNodeAdded -= NodeAdded; graph.OnNodeRemoved -= NodeRemoved;
+            graph.OnConnectionAdded -= FocusConnection;
+            SetInstructionFocus(-1);
             simulation.Engine.OnTransferPath -= Transferred; simulation.Engine.OnRequestFinished -= Finished;
             simulation.OnBeforeTick -= BeforeTick;
             simulation.OnSimulationReset -= ResetSession;
@@ -45,7 +67,7 @@ namespace SysARchitect.Lessons
         private void LateUpdate() => ObserveState();
         private void BeforeTick(double _) => ObserveState();
         private void NodeAdded(GraphNode node)
-        { if (Current.Id == LessonId.Docker && node.Type == NodeType.Container) ActiveAlgorithmLine = 1; }
+        { if (Current.Id == LessonId.Docker && node.Type == NodeType.Container) ActiveAlgorithmLine = 1; FocusNode(node); }
         private void NodeRemoved(GraphNode node)
         {
             limits.Remove(node.NodeId);
@@ -55,6 +77,7 @@ namespace SysARchitect.Lessons
         }
         public void SelectLesson(LessonId id)
         {
+            SetInstructionFocus(-1);
             Current = LessonCatalog.Get(id); ResetObservations();
             CaptureBaseline();
             Feedback = "Read the objectives and steps. Load example replaces the workspace; Check challenge evaluates real simulation state.";

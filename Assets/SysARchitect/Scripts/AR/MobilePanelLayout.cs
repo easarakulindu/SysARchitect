@@ -119,6 +119,7 @@ namespace SysARchitect.AR
             Group(guide.transform, "Quiz choices", guide.transform.Find("Pre-quiz"), guide.transform.Find("Post-quiz"), Child(guide.transform, "Scores / Progress summary")).SetSiblingIndex(3);
             var lessonContent = ScrollPanel(guide.GetComponent<RectTransform>(), "Mobile lesson scroll");
             PinHeaderAndFooter(guide.transform, lessonContent, lessonHeader, stepControls); Flow(lessonContent);
+            explanation.SetAsFirstSibling(); // Current instruction must precede action rows and static overview.
             lessonNavigation.SetParent(guide.transform, false); Dock(lessonNavigation, 0, 1, 1, 1, 8, -216, -8, -120);
             lessonContent.parent.GetComponent<ScrollRect>().viewport.offsetMax = new Vector2(-8, -224);
             lessonPicker.SetParent(guide.transform, false); Dock(lessonPicker, 0, 0, 1, 1, 8, 112, -8, -224);
