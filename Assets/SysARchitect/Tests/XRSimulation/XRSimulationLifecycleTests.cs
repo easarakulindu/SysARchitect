@@ -124,6 +124,25 @@ namespace SysARchitect.Tests
             Assert.That(Object.FindAnyObjectByType<ArchitectureGraph>().transform.parent, Is.Null);
         }
         [UnityTest]
+        public IEnumerator RepositionDuringCreationRetiresStaleResultAndPreservesArchitecture()
+        {
+            yield return SceneManager.LoadSceneAsync("Assets/SysARchitect/Scenes/ARWorkspace.unity");
+            yield return Scan(); yield return Place();
+            var workspace = Object.FindAnyObjectByType<ARWorkspace>();
+            var graph = Object.FindAnyObjectByType<ArchitectureGraph>();
+            var a = graph.AddNode(SysARchitect.Core.NodeType.Frontend, graph.transform.position);
+            var b = graph.AddNode(SysARchitect.Core.NodeType.Backend, graph.transform.position + Vector3.right * .2f);
+            var edge = graph.AddConnection(a, b);
+            workspace.Reposition(); yield return Scan();
+            yield return Place(onRequested: workspace.Reposition, expectWorkspace: false);
+            var anchors = Object.FindAnyObjectByType<ARAnchorManager>(); float deadline = Time.realtimeSinceStartup + 10;
+            while (anchors.trackables.count > 0 && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(anchors.trackables.count, Is.Zero); Assert.That(workspace.HasWorkspace, Is.False);
+            yield return Scan(); yield return Place();
+            Assert.That(graph.Nodes, Is.EquivalentTo(new[] { a, b })); Assert.That(graph.Connections.Single(), Is.SameAs(edge));
+            Assert.That(anchors.trackables.count, Is.EqualTo(1)); Assert.That(graph.transform.parent.GetComponent<ARAnchor>().pending, Is.False);
+        }
+        [UnityTest]
         public IEnumerator VirtualARCyclesRediscoverPlanesAndCreateNewAnchors()
         {
             yield return SceneManager.LoadSceneAsync("Assets/SysARchitect/Scenes/ARWorkspace.unity");

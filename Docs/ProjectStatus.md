@@ -8,8 +8,12 @@ now drains owned anchor changes before shutdown. The combined no-plane timeout
 was traced to scene-loading tests unloading XR Simulation's environment while
 retaining its provider; Editor-only fixtures now recreate that provider between
 independent scenes. Focused **4 XR Play Mode / 96 Edit Mode tests passed**.
-See [root causes and verification](XRSimulationStabilization.md). Full demonstration
-and regression checks are the next validation step; existing builds are preserved.
+Final **96 Edit Mode / 53 Play Mode tests passed**, including the complete real-provider
+XR demonstration: reposition, touch-place/connect three tiers, run traffic (21
+successes), verify CPU/RAM gauges and navigate actual instruction content.
+Runtime fix `855c1f2`; see [root causes, evidence and repeatable procedure](XRSimulationStabilization.md).
+Verification is automated Editor Play Mode, not physical AR or a full manual
+mouse playthrough. Existing APK/Linux builds are preserved and predate this fix.
 
 **Lesson step-content correction (November 1):** recovered the interrupted edits,
 reproduced the unchanged-viewport failure, and moved distinct step headings,
