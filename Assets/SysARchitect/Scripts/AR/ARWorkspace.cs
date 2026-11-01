@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -8,7 +9,7 @@ using SysARchitect.Simulation;
 
 namespace SysARchitect.AR
 {
-    /// <summary>Owns only the real-world placement and tracking of the shared architecture.</summary>
+    /// <summary>Places the shared architecture in AR, or in a clearly labelled non-AR view.</summary>
     public class ARWorkspace : MonoBehaviour
     {
         [SerializeField] private ArchitectureGraph graph;
@@ -17,26 +18,100 @@ namespace SysARchitect.AR
         [SerializeField] private ARPlaneManager planes;
         [SerializeField] private ARAnchorManager anchors;
         [SerializeField] private TextMeshProUGUI status;
+        [SerializeField] private Camera workspaceCamera;
+        [SerializeField] private ARSession session;
+        [SerializeField] private Behaviour[] arOnlyComponents;
         private readonly List<ARRaycastHit> hits = new List<ARRaycastHit>();
         private ARAnchor anchor;
         private bool placing;
+        private int placementRevision;
         private string message;
-        public bool HasWorkspace => anchor != null;
-        public bool CanInteract => HasWorkspace && TrackingAllowsInput(ARSession.state == ARSessionState.SessionTracking, anchor.trackingState == TrackingState.Tracking);
+        private Coroutine availabilityCheck;
+        private int arCullingMask;
+        public enum WorkspaceMode { Checking, AugmentedReality, Virtual }
+        public WorkspaceMode Mode { get; private set; }
+        public bool HasWorkspace => Mode == WorkspaceMode.Virtual || anchor != null;
+        public bool CanInteract => Mode == WorkspaceMode.Virtual || (anchor != null && TrackingAllowsInput(ARSession.state == ARSessionState.SessionTracking, anchor.trackingState == TrackingState.Tracking));
         public static bool TrackingAllowsInput(bool sessionTracking, bool anchorTracking) => sessionTracking && anchorTracking;
 
         private void Start()
         {
             graph.gameObject.SetActive(false);
+            arCullingMask = workspaceCamera.cullingMask;
             Application.targetFrameRate = 60;
 #if ENABLE_LEGACY_INPUT_MANAGER
             Input.simulateMouseWithTouches = false;
 #endif
+            SetARActive(false);
+            availabilityCheck = StartCoroutine(CheckAvailability(false));
+        }
+        private IEnumerator CheckAvailability(bool installIfNeeded)
+        {
+            yield return ARSession.CheckAvailability();
+            if (Mode != WorkspaceMode.Checking) { availabilityCheck = null; yield break; }
+            if (installIfNeeded && ARSession.state == ARSessionState.NeedsInstall)
+                yield return ARSession.Install();
+            availabilityCheck = null;
+            if (Mode != WorkspaceMode.Checking) yield break;
+            CompleteAvailabilityCheck(ARSession.state);
+        }
+        private void CompleteAvailabilityCheck(ARSessionState state)
+        {
+            if (state == ARSessionState.Ready || state == ARSessionState.SessionTracking || state == ARSessionState.SessionInitializing)
+            {
+                Mode = WorkspaceMode.AugmentedReality;
+                workspaceCamera.transform.localPosition = Vector3.zero;
+                workspaceCamera.transform.localRotation = Quaternion.identity;
+                workspaceCamera.cullingMask = arCullingMask;
+                SetARActive(true);
+            }
+            else EnterVirtualWorkspace(state == ARSessionState.NeedsInstall
+                ? "AR services need installation (Virtual / AR to install)."
+                : "AR unavailable.");
+        }
+        private void SetARActive(bool active)
+        {
+            // The scene starts with these disabled: no camera/session starts before availability.
+            if (!active) session.enabled = false;
+            foreach (var component in arOnlyComponents) component.enabled = active;
+            if (active) session.enabled = true;
+        }
+        public void ToggleWorkspaceMode()
+        {
+            if (Mode != WorkspaceMode.Virtual) { EnterVirtualWorkspace("Virtual mode selected."); return; }
+            if (availabilityCheck != null) return;
+            simulation.Pause(); graph.gameObject.SetActive(false);
+            Mode = WorkspaceMode.Checking;
+            availabilityCheck = StartCoroutine(CheckAvailability(true));
+        }
+        private void EnterVirtualWorkspace(string reason)
+        {
+            simulation.Pause(); placing = false; placementRevision++;
+            graph.transform.SetParent(null, true);
+            if (anchor != null) anchors.TryRemoveAnchor(anchor);
+            anchor = null;
+            SetARActive(false);
+            foreach (var plane in planes.trackables) plane.gameObject.SetActive(false);
+            Mode = WorkspaceMode.Virtual; message = reason;
+            graph.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
+            graph.transform.localScale = Vector3.one * .35f;
+            graph.gameObject.SetActive(true);
+            ResetVirtualView();
+        }
+        private void ResetVirtualView()
+        {
+            workspaceCamera.ResetProjectionMatrix();
+            // The editor's XR Simulation environment is separate from the non-AR tabletop.
+            workspaceCamera.cullingMask = arCullingMask & ~LayerMask.GetMask("XR Simulation");
+            workspaceCamera.clearFlags = CameraClearFlags.SolidColor;
+            workspaceCamera.backgroundColor = new Color(.015f, .025f, .05f, 1);
+            workspaceCamera.transform.SetPositionAndRotation(new Vector3(0, .85f, -1.15f), Quaternion.Euler(36.5f, 0, 0));
         }
         private void Update()
         {
             if (!CanInteract) simulation.Pause();
-            status.text = ARSession.state == ARSessionState.Unsupported ? "AR is unavailable on this device. Use the desktop demo on a supported computer."
+            status.text = Mode == WorkspaceMode.Virtual ? $"Virtual Workspace (non-AR). {message} Toolbox: build; tap/drag nodes; Connect: tap two nodes."
+                : Mode == WorkspaceMode.Checking ? "Checking AR availability… Virtual / AR opens the non-AR workspace now."
                 : ARSession.state != ARSessionState.SessionTracking ? $"AR: {ARSession.state}. Move slowly and scan a well-lit textured surface. {ARSession.notTrackingReason}"
                 : placing ? "Creating surface anchor…"
                 : !HasWorkspace ? message ?? "Scan a horizontal surface. Tap a detected plane to anchor the workspace."
@@ -45,16 +120,19 @@ namespace SysARchitect.AR
         }
         public async void TryPlaceWorkspace(Vector2 screenPosition)
         {
-            if (placing || HasWorkspace || ARSession.state != ARSessionState.SessionTracking) return;
+            if (Mode != WorkspaceMode.AugmentedReality || placing || HasWorkspace || ARSession.state != ARSessionState.SessionTracking) return;
             if (!raycasts.Raycast(screenPosition, hits, TrackableType.PlaneWithinPolygon))
             { message = "No detected plane at that point. Scan a horizontal surface and tap its highlighted area."; return; }
             var plane = planes.GetPlane(hits[0].trackableId);
             if (plane == null || plane.alignment != PlaneAlignment.HorizontalUp) return;
             placing = true;
+            int revision = placementRevision;
             try
             {
                 var result = await anchors.TryAddAnchorAsync(hits[0].pose);
                 if (this == null) return;
+                if (Mode != WorkspaceMode.AugmentedReality || revision != placementRevision)
+                { if (result.status.IsSuccess()) anchors.TryRemoveAnchor(result.value); return; }
                 if (!result.status.IsSuccess()) { message = "The device could not anchor that surface. Scan again and retry."; return; }
                 anchor = result.value;
                 graph.transform.SetParent(anchor.transform, false);
@@ -66,11 +144,14 @@ namespace SysARchitect.AR
                 foreach (var trackedPlane in planes.trackables) trackedPlane.gameObject.SetActive(false);
             }
             catch (System.Exception exception) { message = "Anchor creation failed: " + exception.Message; Debug.LogWarning(message); }
-            finally { placing = false; }
+            finally { if (revision == placementRevision) placing = false; }
         }
         public void Reposition()
         {
             simulation.Pause();
+            if (Mode == WorkspaceMode.Virtual) { ResetVirtualView(); return; }
+            if (Mode != WorkspaceMode.AugmentedReality) return;
+            placementRevision++; placing = false;
             graph.transform.SetParent(null, true);
             graph.gameObject.SetActive(false);
             if (anchor != null) anchors.TryRemoveAnchor(anchor);

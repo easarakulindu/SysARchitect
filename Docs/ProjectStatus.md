@@ -8,6 +8,14 @@ for the current audit, milestone implementation and verification records. Histor
 milestone and delivery paths below are retained for provenance. `./RunDesktopDemo.sh`
 is the stable current Linux entry point.
 
+**November 1 mobile crash recovery:** recovered committed mobile UI `52ab98c` and
+release configuration `5b4daca`; the prior in-flight temporary Android build did
+not survive restart. Added optional ARCore and an explicitly non-AR Virtual
+Workspace through the existing graph/touch/UI systems. Fresh verification is
+91 Edit Mode / 41 Play Mode passed, including actual-scene virtual editing,
+database configuration, lessons/quizzes and four phone render resolutions. See
+[recovery, verified behavior and deployment limits](MobileRecovery2026-11-01.md).
+
 **Crash recovery (October 31):** verified existing A–E commits `ea0f368`,
 `be112d4`, `3b8b25a`, `8214677`, `56fbef8` and their test/build records.
 Recovered F's uncommitted mobile build helper and input migration without

@@ -17,7 +17,8 @@ namespace SysARchitect.AR
         {
             toggleToolbox.onClick.AddListener(() => toolbox.SetActive(!toolbox.activeSelf));
             reposition.onClick.AddListener(workspace.Reposition);
-            layout = new MobilePanelLayout(safeArea, toolbox, toggleToolbox, reposition, selection, interactions, () => workspace.CanInteract);
+            layout = new MobilePanelLayout(safeArea, toolbox, toggleToolbox, reposition, selection, interactions,
+                () => workspace.CanInteract, workspace.ToggleWorkspaceMode);
         }
         private void LateUpdate() => layout?.Refresh();
         private void Update()

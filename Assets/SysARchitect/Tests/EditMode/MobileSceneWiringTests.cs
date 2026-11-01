@@ -25,8 +25,16 @@ namespace SysARchitect.Tests
                 foreach (string field in new[] { "safeArea", "toolbox", "toggleToolbox", "reposition", "workspace", "selection", "interactions" })
                     Assert.That(serialized.FindProperty(field).objectReferenceValue, Is.Not.Null, field);
                 var workspace = new SerializedObject(Object.FindAnyObjectByType<ARWorkspace>());
-                foreach (string field in new[] { "graph", "simulation", "raycasts", "planes", "anchors", "status" })
+                foreach (string field in new[] { "graph", "simulation", "raycasts", "planes", "anchors", "status", "session", "workspaceCamera" })
                     Assert.That(workspace.FindProperty(field).objectReferenceValue, Is.Not.Null, field);
+                Assert.That(((Behaviour)workspace.FindProperty("session").objectReferenceValue).enabled, Is.False, "Check availability before starting a session");
+                var components = workspace.FindProperty("arOnlyComponents");
+                Assert.That(components.arraySize, Is.EqualTo(7));
+                for (int i = 0; i < components.arraySize; i++)
+                {
+                    var component = components.GetArrayElementAtIndex(i).objectReferenceValue as Behaviour;
+                    Assert.That(component, Is.Not.Null); Assert.That(component.enabled, Is.False, component.GetType().Name);
+                }
                 var touch = new SerializedObject(Object.FindAnyObjectByType<WorkspaceTouchInput>());
                 foreach (string field in new[] { "workspace", "graph", "mainCamera", "interactions", "placement", "selection", "movement", "connections" })
                     Assert.That(touch.FindProperty(field).objectReferenceValue, Is.Not.Null, field);

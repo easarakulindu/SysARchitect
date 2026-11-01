@@ -1,5 +1,5 @@
 {
     "name": "SysARchitect.PlayModeTests",
-    "references": ["SysARchitect.Runtime", "UnityEngine.UI", "Unity.TextMeshPro"],
+    "references": ["SysARchitect.Runtime", "UnityEngine.UI", "Unity.TextMeshPro", "Unity.XR.ARFoundation"],
     "optionalUnityReferences": ["TestAssemblies"]
 }

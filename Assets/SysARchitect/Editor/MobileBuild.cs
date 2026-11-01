@@ -39,12 +39,14 @@ namespace SysARchitect.Editor
                 PlayerSettings.SetGraphicsAPIs(BuildTarget.iOS, new[] { GraphicsDeviceType.Metal });
             }
             PlayerSettings.defaultInterfaceOrientation = UIOrientation.LandscapeLeft;
-            ARCoreSettings.GetOrCreateSettings().requirement = ARCoreSettings.Requirement.Required;
+            ARCoreSettings.GetOrCreateSettings().requirement = ARCoreSettings.Requirement.Optional;
+            ARCoreSettings.GetOrCreateSettings().depth = ARCoreSettings.Requirement.Optional;
             ARKitSettings.GetOrCreateSettings().requirement = ARKitSettings.Requirement.Required;
             ARWorkspaceSetup.ConfigureProviders();
             ConfigureTouchUI();
+            ARWorkspaceSetup.ConfigureAvailabilityGate();
             AssetDatabase.SaveAssets();
-            Debug.Log("Mobile configuration: ARWorkspace, ARM64 IL2CPP, Android 26–36 GLES3; iOS 15+ Metal, required AR providers.");
+            Debug.Log("Mobile configuration: ARWorkspace, ARM64 IL2CPP, Android 26–36 GLES3, optional ARCore; iOS 15+ Metal, required ARKit.");
         }
 
         private static void ConfigureTouchUI()

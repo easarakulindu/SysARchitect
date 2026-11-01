@@ -18,6 +18,7 @@ namespace SysARchitect.AR
         private readonly NodeSelectionController selection;
         private Button nodeDetails, serviceDetails;
         private bool serviceTab;
+        private bool previousHasService;
         private Object previousSelection;
         private float nextRefresh;
         private InteractionManager.Mode previousMode;
@@ -25,7 +26,8 @@ namespace SysARchitect.AR
         private readonly List<CanvasGroup> trackedControls = new List<CanvasGroup>();
         public const float TouchHeight = 96;
         public MobilePanelLayout(RectTransform root, GameObject toolbox, Button toggle, Button reposition,
-            NodeSelectionController selection, InteractionManager interactions, System.Func<bool> trackingAllowsInput = null)
+            NodeSelectionController selection, InteractionManager interactions, System.Func<bool> trackingAllowsInput = null,
+            UnityEngine.Events.UnityAction switchWorkspace = null)
         {
             this.root = root; this.toolbox = toolbox; this.interactions = interactions;
             this.selection = selection;
@@ -44,6 +46,7 @@ namespace SysARchitect.AR
             toggle.transform.SetParent(row, false); reposition.transform.SetParent(row, false);
             NewButton(row, "Simulation", () => { simulation.SetActive(!simulation.activeSelf); toolbox.SetActive(false); });
             NewButton(row, "Hide details", selection.Deselect);
+            NewButton(row, "Virtual / AR", switchWorkspace ?? (() => { }));
             foreach (Transform child in bar)
                 if (child.GetComponent<TextMeshProUGUI>() is TextMeshProUGUI text)
                 { Dock(text.rectTransform, 0, 0, 1, 0, 12, 8, -12, 72); text.fontSize = 26; text.textWrappingMode = TextWrappingModes.Normal; }
@@ -257,7 +260,8 @@ namespace SysARchitect.AR
             bool hasService = detailPanels.Exists(panel => panel.activeSelf && panel.name != "Node Inspector" && panel.name != "Connection Inspector");
             Object selected = selection.SelectedNode;
             if (selected == null) selected = selection.SelectedConnection;
-            if (selected != previousSelection) { serviceTab = hasService; previousSelection = selected; }
+            if (selected != previousSelection || (hasService && !previousHasService)) { serviceTab = hasService; previousSelection = selected; }
+            previousHasService = hasService;
             if (!hasService) serviceTab = false;
             serviceDetails.interactable = hasService;
             foreach (var panel in detailPanels)

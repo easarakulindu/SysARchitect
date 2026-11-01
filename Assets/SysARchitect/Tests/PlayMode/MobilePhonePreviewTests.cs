@@ -27,7 +27,7 @@ namespace SysARchitect.Tests
         private static void PointerClick(Button button) => ExecuteEvents.Execute(button.gameObject,
             new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left }, ExecuteEvents.pointerClickHandler);
         private static Button Named(Transform parent, string name) => parent.GetComponentsInChildren<Button>(true).Single(b => b.name == name);
-        private static void Inside(RectTransform transform, Rect safe, Camera camera)
+        internal static void Inside(RectTransform transform, Rect safe, Camera camera)
         {
             var corners = new Vector3[4]; transform.GetWorldCorners(corners);
             foreach (var corner in corners)
@@ -37,7 +37,7 @@ namespace SysARchitect.Tests
                 Assert.That(pixel.y, Is.InRange(safe.yMin - 1, safe.yMax + 1), transform.name + " vertical safe bounds");
             }
         }
-        private static void Capture(Camera camera, RenderTexture target, string name)
+        internal static void Capture(Camera camera, RenderTexture target, string name)
         {
             RenderPipeline.SubmitRenderRequest(camera, new RenderPipeline.StandardRequest { destination = target });
             var previous = RenderTexture.active; RenderTexture.active = target;

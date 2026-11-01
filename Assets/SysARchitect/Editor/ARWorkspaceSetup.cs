@@ -131,9 +131,35 @@ namespace SysARchitect.Editor
                 var settings = XRGeneralSettingsPerBuildTarget.XRGeneralSettingsForBuildTarget(target);
                 if (settings == null || settings.Manager == null || settings.Manager.activeLoaders.Count == 0)
                     throw new InvalidOperationException("Missing configured AR provider for " + target);
-                settings.InitManagerOnStart = true; settings.Manager.automaticLoading = true; settings.Manager.automaticRunning = true;
+                settings.InitManagerOnStart = true; settings.Manager.automaticLoading = true; settings.Manager.automaticRunning = false;
                 EditorUtility.SetDirty(settings); EditorUtility.SetDirty(settings.Manager);
             }
+        }
+        [MenuItem("SysARchitect/Mobile/Configure Availability Gate")]
+        public static void ConfigureAvailabilityGate()
+        {
+            var previous = EditorSceneManager.GetSceneManagerSetup();
+            foreach (var item in previous)
+                if (UnityEngine.SceneManagement.SceneManager.GetSceneByPath(item.path).isDirty)
+                    throw new InvalidOperationException("Save open scenes before configuring AR availability.");
+            var scene = EditorSceneManager.OpenScene(ScenePath);
+            var workspace = UnityEngine.Object.FindAnyObjectByType<ARWorkspace>();
+            var camera = Camera.main;
+            var session = UnityEngine.Object.FindAnyObjectByType<ARSession>();
+            Behaviour[] components = {
+                workspace.GetComponent<ARPlaneManager>(), workspace.GetComponent<ARRaycastManager>(), workspace.GetComponent<ARAnchorManager>(),
+                session.GetComponent<ARInputManager>(), camera.GetComponent<ARCameraManager>(), camera.GetComponent<ARCameraBackground>(), camera.GetComponent<TrackedPoseDriver>()
+            };
+            if (components.Any(c => c == null)) throw new InvalidOperationException("Existing AR scene is missing a required provider component.");
+            Set(workspace, "workspaceCamera", camera); Set(workspace, "session", session);
+            var serialized = new SerializedObject(workspace);
+            var property = serialized.FindProperty("arOnlyComponents"); property.arraySize = components.Length;
+            for (int i = 0; i < components.Length; i++) { property.GetArrayElementAtIndex(i).objectReferenceValue = components[i]; components[i].enabled = false; }
+            serialized.ApplyModifiedPropertiesWithoutUndo(); session.enabled = false;
+            EditorSceneManager.SaveScene(scene);
+            ConfigureProviders();
+            AssetDatabase.SaveAssets();
+            if (previous.Length > 0 && previous.All(item => !string.IsNullOrEmpty(item.path))) EditorSceneManager.RestoreSceneManagerSetup(previous);
         }
     }
 }

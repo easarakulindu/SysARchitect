@@ -18,7 +18,7 @@ Install Android Build Support **with Android SDK & NDK Tools and OpenJDK** in
 Unity Hub for this exact editor. This machine has Hub's SDK (platform 36,
 build-tools 36.0.0), NDK **27.2.12479018 / r27c**, and OpenJDK **17.0.18**.
 The command configures IL2CPP, ARM64 only, GLES3, minimum API **26** and target
-API **36**, ARCore required. The minimum is checked against the installed
+API **36**, ARCore optional (depth optional). The minimum is checked against the installed
 ARCore editor validation rules for Unity 6000.6, rather than older AR samples.
 Internet access may be necessary for Gradle/Maven dependencies on the first build.
 
@@ -44,11 +44,30 @@ adb shell monkey -p com.easara.sysarchitect 1
 adb logcat -s Unity AndroidRuntime
 ```
 
-Use an **ARM64, ARCore-certified physical device**, Android 8/API 26 or newer,
-with a working camera and current Google Play Services for AR. Minimum Android
-version alone does not establish ARCore compatibility; check the exact model
+Virtual Workspace supports an **ARM64 Android 8/API 26 or newer device** without
+ARCore. It is explicitly non-AR and uses the existing shared builder/simulator.
+The developer's Redmi Note 13 4G has not been connected or installed here; check
+its actual Android API and ABI before installation with `adb shell getprop
+ro.build.version.sdk` and `adb shell getprop ro.product.cpu.abilist`.
+
+For genuine AR, use an **ARCore-certified physical device**, with a working camera
+and current Google Play Services for AR. Minimum Android version alone does not
+establish ARCore compatibility; check the exact model
 against [Google's supported device list](https://developers.google.com/ar/devices).
 No depth sensor is required by this horizontal-plane application.
+
+The scene checks AR availability before enabling the session, camera, tracking,
+planes, anchors or raycasts. Unsupported/missing-service outcomes open Virtual
+Workspace. **Virtual / AR** switches to non-AR immediately, or retries AR from
+Virtual mode; supported devices missing services can explicitly request their
+installation. A supported, installed provider starts the existing AR path.
+Virtual mode uses a fixed tabletop camera; Reposition resets that view and keeps
+nodes/connections. Switching modes pauses simulation and retains the architecture;
+returning to AR requires scanning and anchoring the workspace again. Virtual mode
+has no plane, camera-feed or real-world anchor behavior. Camera permission or
+tracking problems on a supported device can be bypassed using Virtual / AR.
+XR initializes the provider for availability queries, but automatic subsystem
+running is disabled; only the checked AR path enables the AR components.
 
 ## MacBook and iPhone
 
