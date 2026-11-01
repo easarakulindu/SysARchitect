@@ -15,6 +15,12 @@ Workspace through the existing graph/touch/UI systems. Fresh verification is
 91 Edit Mode / 41 Play Mode passed, including actual-scene virtual editing,
 database configuration, lessons/quizzes and four phone render resolutions. See
 [recovery, verified behavior and deployment limits](MobileRecovery2026-11-01.md).
+Feature commit `f79d946` now has verified **0.11.0** Android and Linux builds at
+`Builds/Android-RC1/SysARchitect.apk` and `Builds/Linux-RC1/SysARchitect.x86_64`.
+APK manifest/signature/ABI checks passed; Linux startup check passed. The existing
+Linux-Current launcher/build and old APK were preserved. ADB had no connected
+device; physical Android AR/Virtual acceptance and Mac/iOS deployment remain
+unverified. Use the RC1 paths for the new builds.
 
 **Crash recovery (October 31):** verified existing A–E commits `ea0f368`,
 `be112d4`, `3b8b25a`, `8214677`, `56fbef8` and their test/build records.

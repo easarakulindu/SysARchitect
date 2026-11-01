@@ -1,5 +1,12 @@
 # Mobile builds and device handoff
 
+**Current verified delivery (November 1):** version **0.11.0**,
+`Builds/Android-RC1/SysARchitect.apk`, with optional ARCore and labelled non-AR
+Virtual Workspace. The earlier default-path APK was preserved. Use the RC1 APK
+for testing; see [build evidence, exact ADB commands and limits](MobileRecovery2026-11-01.md).
+The packaged APK requires GLES 3.1 in addition to API 26+ and ARM64. No phone was
+connected during verification.
+
 Use Unity **6000.6.5f1** (revision 3ff58d469c8a), including its matching platform
 modules. Keep Packages/manifest.json and packages-lock.json: AR Foundation,
 ARCore and ARKit are **6.6.2**, URP **17.6.0**, XRI **3.6.1**. The 3.5.1 samples
@@ -143,7 +150,7 @@ outputs and actual checks are recorded in [MobileUIReleaseCandidate.md](MobileUI
 Build success alone does not verify these checks. Camera permission denial,
 unsupported-device and tracking recovery need device testing too.
 
-## Recorded Linux build result — October 31, 2026
+## Historical Android build checkpoint — October 31, 2026
 
 The recovered Android build succeeded in the isolated validation checkout using
 the installed toolchain. Delivered APK: `Builds/Android/SysARchitect.apk`, version

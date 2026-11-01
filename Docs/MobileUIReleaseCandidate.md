@@ -63,6 +63,8 @@ thermal behavior or performance. Device acceptance remains necessary.
 
 ## Release builds
 
-Current Android/Linux release-candidate builds will be recorded here after the
-UI checkpoint is committed and build configuration is verified. The prior Linux
-demo and APK are preserved until new outputs pass their checks.
+The October 31 build was interrupted before a finished 0.11.0 APK could be
+verified. November 1 recovery completed optional ARCore/Virtual Workspace and
+verified fresh Android/Linux outputs from `f79d946`; see the
+[current artifact paths, hashes, tests and installation handoff](MobileRecovery2026-11-01.md).
+The earlier Linux demo and APK remain preserved.

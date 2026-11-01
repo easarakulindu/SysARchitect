@@ -87,5 +87,64 @@ lists Xcode 26.0/26.0.1 for macOS Sequoia 15.6 through Tahoe 26.x. Select a vers
 that also supports the actual phone OS. Neither Unity/Xcode installation nor the
 Mac's macOS/iPhone version was assumed. Linux cannot sign or run the iOS app.
 
-Release build output, hashes and installation commands will be recorded after
-the tested feature checkpoint and actual build verification.
+## Verified release-candidate artifacts
+
+Both builds succeeded with Unity 6000.6.5f1 from feature commit
+**f79d9466f999920259df750ca14d0f54b8a08f06**. BUILD-INFO.txt records that source
+revision, Unity version, UTC build time, explicit scene and dependency hash.
+The APK and Linux player identify themselves as **0.11.0**. The later handoff
+documentation commit does not change player code/assets.
+
+| Output | Actual result |
+| --- | --- |
+| `Builds/Android-RC1/SysARchitect.apk` | **35,865,306 bytes**, built UTC 2026-11-01T06:25:10Z |
+| APK SHA-256 | `c5014701702dc8c010444a1164909bf1246e351a93d8454ca2db06a03b33b798` |
+| `Builds/Linux-RC1/SysARchitect.x86_64` | Build succeeded; Unity reported 108,895,869 bytes, built UTC 2026-11-01T06:26:44Z |
+| Linux startup smoke check | Eight seconds, no application exceptions/errors observed; timeout exit 124 intentionally stopped the process |
+
+APK verification used Hub SDK build-tools **36.0.0 aapt**, JDK **17.0.18** and
+apksigner.jar. Manifest confirms com.easara.sysarchitect, min API 26 / target 36,
+**ARCore metadata `optional`**, no required camera.ar/depth feature, camera
+permission and GLES **3.1** (0x30001). ZIP native libraries are **arm64-v8a only**.
+Signature verification passed with the local Android Debug certificate. This is
+a locally signed test APK, not a store publication or release-key artifact.
+The build used NDK **27.2.12479018 / r27c** and Gradle **9.3.1**. Unity's larger
+reported Android build total includes native backup output; the APK size above
+is measured from the delivered file itself.
+
+The helper restored Both input backends and the prior project bundle version
+after Android building. The validation checkout's Unity material import normalized
+WorkloadGlass shader serialization; the source material was not overwritten.
+The earlier `Builds/Android/SysARchitect.apk`, `Builds/Linux-Current` and
+`RunDesktopDemo.sh` remain preserved. Use the explicit RC1 paths for these new
+builds. Nothing was pushed or published.
+
+Build/player logs, APK badging/manifest/signature output, BUILD-INFO copies, Linux
+file hashes, final tests and renders are retained under ignored
+`Builds/ReleaseCandidateEvidence/2026-11-01`. `adb devices -l` was empty; no APK
+installation, physical AR or on-device persistence/performance test was performed.
+The physical-device/Mac checks above remain outstanding.
+
+## Install on the Redmi Note 13 4G
+
+Enable USB debugging, connect via USB and authorize this computer. From the
+project root, use the actual installed SDK tool (no system Java changes needed):
+
+```sh
+adb_tool=/home/easara/Unity/Hub/Editor/6000.6.5f1/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb
+"$adb_tool" devices -l
+"$adb_tool" shell getprop ro.build.version.sdk
+"$adb_tool" shell getprop ro.product.cpu.abilist
+"$adb_tool" shell getprop ro.opengles.version
+"$adb_tool" install -r Builds/Android-RC1/SysARchitect.apk
+"$adb_tool" shell am start -n com.easara.sysarchitect/com.unity3d.player.UnityPlayerGameActivity
+"$adb_tool" logcat -s Unity AndroidRuntime
+```
+
+Confirm API >= 26, arm64-v8a and GLES >= 3.1 (decimal 196609) on the actual phone.
+If AR is unavailable, the app opens **Virtual Workspace (non-AR)**. Virtual / AR
+also allows choosing that mode when the device reports AR support. Use Toolbox
+to build, Edit / Connect for edge operations, Simulation for Run/Build/Step,
+Service for database/routing/container configuration, and Lessons / Progress
+for guidance and quizzes. These are installation instructions, not an executed
+phone test. Run the new Linux player directly from its RC1 path above.
