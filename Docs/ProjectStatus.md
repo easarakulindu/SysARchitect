@@ -2,6 +2,15 @@
 
 Target demonstration: November 2, 2026. No remote pushes are authorized.
 
+**XR lifecycle stabilization (November 1):** confirmed and repaired removal of an
+anchor before its provider addition was acknowledged. Cancellation/mode switching
+now drains owned anchor changes before shutdown. The combined no-plane timeout
+was traced to scene-loading tests unloading XR Simulation's environment while
+retaining its provider; Editor-only fixtures now recreate that provider between
+independent scenes. Focused **4 XR Play Mode / 96 Edit Mode tests passed**.
+See [root causes and verification](XRSimulationStabilization.md). Full demonstration
+and regression checks are the next validation step; existing builds are preserved.
+
 **Lesson step-content correction (November 1):** recovered the interrupted edits,
 reproduced the unchanged-viewport failure, and moved distinct step headings,
 instructions and explanations above static overview text. Navigation restores

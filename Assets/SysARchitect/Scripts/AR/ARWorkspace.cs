@@ -25,6 +25,7 @@ namespace SysARchitect.AR
         private ARAnchor anchor;
         private bool placing;
         private int placementRevision;
+        private int anchorOperations;
         private string message;
         private Coroutine availabilityCheck;
         private int arCullingMask;
@@ -47,6 +48,9 @@ namespace SysARchitect.AR
         }
         private IEnumerator CheckAvailability(bool installIfNeeded)
         {
+            // Finish owned anchor changes before restarting the provider on a mode switch.
+            while (anchorOperations > 0) yield return null;
+            if (Mode != WorkspaceMode.Checking) { availabilityCheck = null; yield break; }
             yield return ARSession.CheckAvailability();
             if (Mode != WorkspaceMode.Checking) { availabilityCheck = null; yield break; }
             if (installIfNeeded && ARSession.state == ARSessionState.NeedsInstall)
@@ -72,9 +76,11 @@ namespace SysARchitect.AR
         private void SetARActive(bool active)
         {
             // The scene starts with these disabled: no camera/session starts before availability.
-            if (!active) session.enabled = false;
-            foreach (var component in arOnlyComponents) component.enabled = active;
-            if (active) session.enabled = true;
+            bool drainingAnchors = anchorOperations > 0;
+            if (!active && !drainingAnchors) session.enabled = false;
+            foreach (var component in arOnlyComponents)
+                component.enabled = active || (drainingAnchors && component == anchors);
+            if (active || drainingAnchors) session.enabled = true;
         }
         public void ToggleWorkspaceMode()
         {
@@ -88,7 +94,7 @@ namespace SysARchitect.AR
         {
             simulation.Pause(); placing = false; placementRevision++;
             graph.transform.SetParent(null, true);
-            if (anchor != null) anchors.TryRemoveAnchor(anchor);
+            if (anchor != null) ReleaseAnchor(anchor);
             anchor = null;
             SetARActive(false);
             foreach (var plane in planes.trackables) plane.gameObject.SetActive(false);
@@ -127,14 +133,20 @@ namespace SysARchitect.AR
             if (plane == null || plane.alignment != PlaneAlignment.HorizontalUp) return;
             placing = true;
             int revision = placementRevision;
+            anchorOperations++;
             try
             {
                 var result = await anchors.TryAddAnchorAsync(hits[0].pose);
                 if (this == null) return;
-                if (Mode != WorkspaceMode.AugmentedReality || revision != placementRevision)
-                { if (result.status.IsSuccess()) anchors.TryRemoveAnchor(result.value); return; }
                 if (!result.status.IsSuccess()) { message = "The device could not anchor that surface. Scan again and retry."; return; }
-                anchor = result.value;
+                // Async creation can finish before GetChanges announces the anchor. Removing a
+                // pending anchor makes XR Simulation emit a removal without a preceding addition.
+                var created = result.value;
+                while (this != null && created != null && created.pending) await Awaitable.NextFrameAsync();
+                if (this == null || created == null) return;
+                if (Mode != WorkspaceMode.AugmentedReality || revision != placementRevision)
+                { ReleaseAnchor(created); return; }
+                anchor = created;
                 graph.transform.SetParent(anchor.transform, false);
                 graph.transform.localPosition = Vector3.zero;
                 graph.transform.localRotation = Quaternion.identity;
@@ -144,7 +156,38 @@ namespace SysARchitect.AR
                 foreach (var trackedPlane in planes.trackables) trackedPlane.gameObject.SetActive(false);
             }
             catch (System.Exception exception) { message = "Anchor creation failed: " + exception.Message; Debug.LogWarning(message); }
-            finally { if (revision == placementRevision) placing = false; }
+            finally
+            {
+                if (this != null)
+                {
+                    if (revision == placementRevision) placing = false;
+                    FinishAnchorOperation();
+                }
+            }
+        }
+        private async void ReleaseAnchor(ARAnchor retired)
+        {
+            anchorOperations++;
+            try
+            {
+                while (this != null && retired != null && retired.pending) await Awaitable.NextFrameAsync();
+                if (this == null || retired == null) return;
+                var id = retired.trackableId;
+                if (!anchors.TryRemoveAnchor(retired))
+                { message = "The device did not confirm removal of the previous anchor."; return; }
+                // Keep the manager/session alive until the removal has actually been consumed.
+                while (this != null && anchors != null && anchors.GetAnchor(id) != null) await Awaitable.NextFrameAsync();
+            }
+            catch (System.Exception exception)
+            { if (this != null) { message = "Anchor removal failed: " + exception.Message; Debug.LogException(exception, this); } }
+            finally { if (this != null) FinishAnchorOperation(); }
+        }
+        private void FinishAnchorOperation()
+        {
+            anchorOperations--;
+            if (Mode == WorkspaceMode.AugmentedReality) return;
+            SetARActive(false);
+            if (Mode == WorkspaceMode.Virtual) ResetVirtualView();
         }
         public void Reposition()
         {
@@ -154,7 +197,7 @@ namespace SysARchitect.AR
             placementRevision++; placing = false;
             graph.transform.SetParent(null, true);
             graph.gameObject.SetActive(false);
-            if (anchor != null) anchors.TryRemoveAnchor(anchor);
+            if (anchor != null) ReleaseAnchor(anchor);
             anchor = null;
             planes.enabled = true;
             foreach (var trackedPlane in planes.trackables) trackedPlane.gameObject.SetActive(true);

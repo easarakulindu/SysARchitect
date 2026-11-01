@@ -1,0 +1,20 @@
+{
+  "name": "SysARchitect.XRSimulationTests",
+  "references": [
+    "SysARchitect.Runtime",
+    "SysARchitect.PlayModeTests",
+    "Unity.XR.ARFoundation",
+    "Unity.XR.ARSubsystems",
+    "Unity.XR.Management",
+    "Unity.XR.Simulation",
+    "Unity.InputSystem",
+    "UnityEngine.UI",
+    "Unity.TextMeshPro"
+  ],
+  "defineConstraints": [
+    "UNITY_EDITOR"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}

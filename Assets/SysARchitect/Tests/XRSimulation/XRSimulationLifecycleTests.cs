@@ -1,0 +1,153 @@
+using System.Collections;
+using System.Linq;
+using System.Reflection;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.TestTools;
+using UnityEngine.XR.ARFoundation;
+using UnityEngine.XR.ARSubsystems;
+using UnityEngine.XR.Management;
+using UnityEngine.XR.Simulation;
+using SysARchitect.AR;
+using SysARchitect.Graph;
+
+namespace SysARchitect.Tests
+{
+    public class XRSimulationLifecycleTests
+    {
+        [UnitySetUp]
+        public IEnumerator FreshProvider()
+        {
+            // LoadScene(Single) unloads XR Simulation's additive environment. The loader
+            // outlives scenes, so reset that provider between independently loaded test scenes.
+            yield return ReloadProvider();
+        }
+        internal static IEnumerator ReloadProvider()
+        {
+            yield return SceneManager.LoadSceneAsync("Assets/SysARchitect/Scenes/DesktopWorkspace.unity");
+            var manager = XRGeneralSettings.Instance.Manager;
+            manager.DeinitializeLoader(); yield return null;
+            manager.InitializeLoaderSync();
+            Assert.That(manager.activeLoader, Is.InstanceOf<SimulationLoader>());
+        }
+        private static ARPlane Up(ARPlaneManager manager)
+        { foreach (var plane in manager.trackables) if (plane.isActiveAndEnabled && plane.alignment == PlaneAlignment.HorizontalUp) return plane; return null; }
+        private static IEnumerator Tracking()
+        {
+            float deadline = Time.realtimeSinceStartup + 10;
+            var workspace = Object.FindAnyObjectByType<ARWorkspace>();
+            while ((workspace.Mode == ARWorkspace.WorkspaceMode.Checking || ARSession.state != ARSessionState.SessionTracking) && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(XRGeneralSettings.Instance.Manager.activeLoader, Is.InstanceOf<SimulationLoader>());
+            Assert.That(workspace.Mode, Is.EqualTo(ARWorkspace.WorkspaceMode.AugmentedReality));
+            Assert.That(ARSession.state, Is.EqualTo(ARSessionState.SessionTracking));
+        }
+        internal static IEnumerator Scan()
+        {
+            yield return Tracking();
+            var planes = Object.FindAnyObjectByType<ARPlaneManager>();
+            var pose = Object.FindAnyObjectByType<SimulationCameraPoseProvider>();
+            Assert.That(pose, Is.Not.Null);
+            Vector3 origin = pose.transform.position;
+            float deadline = Time.realtimeSinceStartup + 20;
+            while (Up(planes) == null && Time.realtimeSinceStartup < deadline)
+            {
+                pose.transform.SetPositionAndRotation(origin + new Vector3(Mathf.Sin(Time.realtimeSinceStartup) * .25f, 0, 0), Quaternion.Euler(65, 0, 0));
+                yield return null;
+            }
+            // Diagnostics only: no mutation of package internals or injected tracking results.
+            var environmentType = typeof(SimulationCameraPoseProvider).Assembly.GetType("UnityEngine.XR.Simulation.SimulationEnvironment");
+            Debug.Log("XR lifecycle: environment instances=" + Resources.FindObjectsOfTypeAll(environmentType).Cast<Component>().Count(e => e.gameObject.scene.IsValid()) + "; planes=" + planes.trackables.count);
+            Assert.That(Up(planes), Is.Not.Null, "Real simulated environment must rediscover horizontal planes");
+        }
+        internal static IEnumerator Place(System.Action onPlaced = null, System.Action onRequested = null, bool expectWorkspace = true)
+        {
+            var workspace = Object.FindAnyObjectByType<ARWorkspace>();
+            var planes = Object.FindAnyObjectByType<ARPlaneManager>(); var rays = Object.FindAnyObjectByType<ARRaycastManager>();
+            var pose = Object.FindAnyObjectByType<SimulationCameraPoseProvider>();
+            var hits = new System.Collections.Generic.List<ARRaycastHit>();
+            pose.transform.rotation = Quaternion.LookRotation(Up(planes).center - pose.transform.position);
+            float deadline = Time.realtimeSinceStartup + 10; bool requested = false;
+            while (!workspace.HasWorkspace && Time.realtimeSinceStartup < deadline)
+            {
+                if (!requested) foreach (var plane in planes.trackables)
+                {
+                    if (plane.alignment != PlaneAlignment.HorizontalUp) continue;
+                    Vector3 screen = Camera.main.WorldToScreenPoint(plane.center);
+                    if (screen.z > 0 && rays.Raycast((Vector2)screen, hits, TrackableType.PlaneWithinPolygon))
+                    { workspace.TryPlaceWorkspace(screen); requested = true; onRequested?.Invoke(); break; }
+                }
+                if (requested && !expectWorkspace) yield break;
+                if (!workspace.HasWorkspace) yield return null;
+            }
+            Assert.That(workspace.HasWorkspace && workspace.CanInteract, Is.True);
+            var graph = Object.FindAnyObjectByType<ArchitectureGraph>();
+            Assert.That(graph.transform.parent.GetComponent<ARAnchor>(), Is.Not.Null);
+            onPlaced?.Invoke();
+        }
+        [UnityTest]
+        public IEnumerator ImmediateRepositionRemovesConfirmedAnchorsAndCanRepeat()
+        {
+            yield return SceneManager.LoadSceneAsync("Assets/SysARchitect/Scenes/ARWorkspace.unity");
+            var workspace = Object.FindAnyObjectByType<ARWorkspace>(); var anchors = Object.FindAnyObjectByType<ARAnchorManager>();
+            for (int cycle = 0; cycle < 3; cycle++)
+            {
+                yield return Scan();
+                yield return Place(() =>
+                {
+                    var created = Object.FindAnyObjectByType<ArchitectureGraph>().transform.parent.GetComponent<ARAnchor>();
+                    Debug.Log("XR lifecycle: immediately repositioning anchor " + created.trackableId + "; pending=" + created.pending);
+                    workspace.Reposition();
+                });
+                var graph = Object.FindAnyObjectByType<ArchitectureGraph>(FindObjectsInactive.Include);
+                Assert.That(workspace.HasWorkspace, Is.False);
+                float deadline = Time.realtimeSinceStartup + 10;
+                while (anchors.trackables.count > 0 && Time.realtimeSinceStartup < deadline) yield return null;
+                Assert.That(anchors.trackables.count, Is.Zero);
+                Assert.That(graph.transform.parent, Is.Null);
+            }
+        }
+        [UnityTest]
+        public IEnumerator SwitchingToVirtualDuringCreationDrainsTheUnpublishedAnchor()
+        {
+            yield return SceneManager.LoadSceneAsync("Assets/SysARchitect/Scenes/ARWorkspace.unity");
+            yield return Scan();
+            var workspace = Object.FindAnyObjectByType<ARWorkspace>();
+            yield return Place(onRequested: () => workspace.ToggleWorkspaceMode(), expectWorkspace: false);
+            var session = Object.FindAnyObjectByType<ARSession>();
+            var anchors = Object.FindAnyObjectByType<ARAnchorManager>();
+            float deadline = Time.realtimeSinceStartup + 10;
+            while (session.enabled && Time.realtimeSinceStartup < deadline) yield return null;
+            Assert.That(workspace.Mode, Is.EqualTo(ARWorkspace.WorkspaceMode.Virtual));
+            Assert.That(workspace.CanInteract, Is.True); Assert.That(session.enabled, Is.False);
+            Assert.That(anchors.trackables.count, Is.Zero);
+            Assert.That(Object.FindAnyObjectByType<ArchitectureGraph>().transform.parent, Is.Null);
+        }
+        [UnityTest]
+        public IEnumerator VirtualARCyclesRediscoverPlanesAndCreateNewAnchors()
+        {
+            yield return SceneManager.LoadSceneAsync("Assets/SysARchitect/Scenes/ARWorkspace.unity");
+            var workspace = Object.FindAnyObjectByType<ARWorkspace>();
+            for (int cycle = 0; cycle < 2; cycle++)
+            {
+                yield return Scan(); yield return Place(); workspace.ToggleWorkspaceMode();
+                Assert.That(workspace.Mode, Is.EqualTo(ARWorkspace.WorkspaceMode.Virtual));
+                yield return null;
+                workspace.ToggleWorkspaceMode(); yield return Tracking();
+            }
+            yield return Scan(); yield return Place();
+        }
+        [UnityTest]
+        public IEnumerator VirtualTestSequenceThenARWorkspaceDiscoversRealPlanes()
+        {
+            var previous = new VirtualWorkspaceTests();
+            yield return previous.ActualVirtualSceneRendersSafePhoneLayoutsWithExplicitNonARStatus();
+            yield return previous.UnavailableOrMissingARServicesLeaveAllARComponentsDisabled();
+            yield return previous.VirtualModeUsesActualMobileSceneAndSharedTouchGraphCommands();
+            yield return previous.VirtualWorkspaceRunsDatabaseLessonConfigurationAndQuiz();
+            yield return ReloadProvider();
+            yield return SceneManager.LoadSceneAsync("Assets/SysARchitect/Scenes/ARWorkspace.unity");
+            yield return Scan(); yield return Place();
+        }
+    }
+}
