@@ -2,6 +2,13 @@
 
 Target demonstration: November 2, 2026. No remote pushes are authorized.
 
+**Mobile lesson navigation correction (November 1):** the guide now has separate
+Previous lesson / Lessons / Next lesson controls and bounded instruction-step
+controls. All five topics can be revisited in the picker; completion/quiz storage
+and the current graph/simulation are retained. Verified 91 Edit Mode / 44 Play
+Mode passes, plus final focused navigation checks and four mobile resolutions.
+See [navigation design, regression evidence and Android delivery](LessonNavigation.md).
+
 **Current approved work:** the October 31 educational/AR request authorizes milestones
 A–G and supersedes the earlier AR hold. See [Educational and AR delivery](EducationAndAR.md)
 for the current audit, milestone implementation and verification records. Historical

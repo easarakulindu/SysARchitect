@@ -112,7 +112,7 @@ namespace SysARchitect.Editor
             {
                 // Android does not support Both. Desktop retains its legacy mouse input.
                 inputHandler.intValue = 1; settings.ApplyModifiedPropertiesWithoutUndo();
-                PlayerSettings.bundleVersion = "0.11.0";
+                PlayerSettings.bundleVersion = "0.11.1";
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
                 {

@@ -41,6 +41,11 @@ namespace SysARchitect.Tests
                 Assert.That(GameObject.Find("EventSystem").GetComponents<MonoBehaviour>().Any(c => c != null && c.GetType().Name == "InputSystemUIInputModule"), Is.True);
                 var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/SysARchitect/Prefabs/UI/MobileToolboxButton.prefab");
                 Assert.That(prefab.GetComponent<LayoutElement>().preferredHeight, Is.EqualTo(MobilePanelLayout.TouchHeight));
+                var lessons = new SerializedObject(Object.FindAnyObjectByType<SysARchitect.UI.LessonUI>());
+                foreach (string field in new[] { "previousLesson", "nextLesson", "lessonListButton", "previousStep", "nextStep", "lessonSelectionPanel" })
+                    Assert.That(lessons.FindProperty(field).objectReferenceValue, Is.Not.Null, field);
+                var choices = lessons.FindProperty("lessonChoices"); Assert.That(choices.arraySize, Is.EqualTo(5));
+                for (int i = 0; i < choices.arraySize; i++) Assert.That(choices.GetArrayElementAtIndex(i).objectReferenceValue, Is.Not.Null);
             }
             finally
             {
