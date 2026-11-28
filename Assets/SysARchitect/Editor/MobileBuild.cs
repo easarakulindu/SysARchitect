@@ -4,6 +4,9 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
+#if UNITY_ANDROID
+using UnityEditor.Android;
+#endif
 using UnityEditor.SceneManagement;
 using UnityEditor.XR.ARCore;
 using UnityEditor.XR.ARKit;
@@ -15,8 +18,22 @@ using UnityEngine.InputSystem.UI;
 namespace SysARchitect.Editor
 {
     /// <summary>Explicit mobile scene and toolchain settings; never signs with a private release key.</summary>
-    public static class MobileBuild
+    public sealed class MobileBuild
+#if UNITY_ANDROID
+        : IPostGenerateGradleAndroidProject
+#endif
     {
+#if UNITY_ANDROID
+        public int callbackOrder => 1000;
+        public void OnPostGenerateGradleAndroidProject(string gradleProjectPath)
+        {
+            string properties = Path.GetFullPath(Path.Combine(gradleProjectPath, "..", "gradle.properties"));
+            var limits = new[] { "org.gradle.workers.max=1", "org.gradle.parallel=false", "org.gradle.daemon=false" };
+            var keys = limits.Select(line => line.Substring(0, line.IndexOf('=') + 1)).ToArray();
+            var existing = File.ReadAllLines(properties).Where(line => !keys.Any(key => line.TrimStart().StartsWith(key, StringComparison.Ordinal)));
+            File.WriteAllLines(properties, existing.Concat(limits));
+        }
+#endif
         [MenuItem("SysARchitect/Mobile/Configure AR Platforms")]
         public static void Configure()
         {
@@ -82,11 +99,15 @@ namespace SysARchitect.Editor
             const string heapKey = "AndroidJVMMaxHeapSize";
             bool hadHeapPreference = EditorPrefs.HasKey(heapKey);
             int previousHeap = EditorPrefs.GetInt(heapKey, 4096);
+            string previousWorkers = Environment.GetEnvironmentVariable("BEE_BUILD_THREADS");
+            string previousJavaOptions = Environment.GetEnvironmentVariable("JAVA_TOOL_OPTIONS");
             try
             {
                 // Installed Android extension reads this preference when launching Gradle.
                 // Bound the transient build heap on the 16 GB validation host; restore it below.
-                EditorPrefs.SetInt(heapKey, 2048);
+                EditorPrefs.SetInt(heapKey, 1024);
+                Environment.SetEnvironmentVariable("BEE_BUILD_THREADS", "1");
+                Environment.SetEnvironmentVariable("JAVA_TOOL_OPTIONS", (previousJavaOptions + " -XX:ActiveProcessorCount=1 -Xmx1024m").Trim());
                 EditorUserBuildSettings.buildAppBundle = false;
                 PlayerSettings.Android.useCustomKeystore = false;
                 Build(BuildTarget.Android, "Builds/Android/SysARchitect.apk");
@@ -96,6 +117,8 @@ namespace SysARchitect.Editor
                 EditorUserBuildSettings.buildAppBundle = appBundle;
                 PlayerSettings.Android.useCustomKeystore = customSigning;
                 if (hadHeapPreference) EditorPrefs.SetInt(heapKey, previousHeap); else EditorPrefs.DeleteKey(heapKey);
+                Environment.SetEnvironmentVariable("BEE_BUILD_THREADS", previousWorkers);
+                Environment.SetEnvironmentVariable("JAVA_TOOL_OPTIONS", previousJavaOptions);
             }
         }
 

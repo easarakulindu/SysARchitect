@@ -99,12 +99,14 @@ planes (20 cm and 40x60 cm were observed). Visible-plane selection and adaptive
 scale address that behavior; exact size/bounds checks cover compact and large planes.
 A boundary initialization error during development was repaired using Unity's
 null comparison. Its cancelled isolated editor crashed during shutdown; subsequent
-clean focused/full runs exited 0. No host crash or physical device test is claimed.
+clean focused/full runs exited 0. That editor shutdown is separate from the later host OOM described below. No physical device test is claimed.
 
 Unity processes ran sequentially with two job workers and one import worker.
 Registry-driven toolchain migration was disabled for cached validation. Two
 commands timed out in automatic approval review before execution and succeeded on
 retry. Production package manifests, XR providers and working Linux/APK artifacts
 were preserved. Unrelated untracked `dotnet-tools.json` and
-`Assets/StreamingAssets/VoiceModels/` were preserved and excluded from these commits
-and the isolated validation/build inputs. `.agents` remains ignored.
+`Assets/StreamingAssets/VoiceModels/` were preserved and excluded from commits.
+Recovery subsequently found copies of those models in the validation/exported inputs;
+these copies were moved aside before packaging, and APK inspection confirmed no
+model files were shipped. The original repository files remain untouched. `.agents` remains ignored.
