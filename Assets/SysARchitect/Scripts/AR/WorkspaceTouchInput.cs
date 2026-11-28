@@ -22,14 +22,62 @@ namespace SysARchitect.AR
         private bool moved;
         private int finger = -1;
         private bool beganOverUI;
+#if UNITY_EDITOR
+        private bool editorMousePressed;
+#endif
         private void Awake()
         {
             placement.UseExternalPointer = selection.UseExternalPointer = movement.UseExternalPointer = connections.UseExternalPointer = true;
         }
         private void Update()
         {
-            ReadTouchscreen(Touchscreen.current);
+            var screen = Touchscreen.current;
+#if UNITY_EDITOR
+            // XR Simulation still uses the mobile editing commands. Accept an ordinary
+            // Editor mouse when no enabled touch device is supplying that input.
+            if (!EditorTouchOwnsInput(screen))
+            {
+                finger = -1;
+                ReadEditorMouse(Mouse.current);
+                return;
+            }
+            if (editorMousePressed) { editorMousePressed = false; activeGesture = false; }
+#endif
+            ReadTouchscreen(screen);
         }
+#if UNITY_EDITOR
+        private static bool EditorTouchOwnsInput(Touchscreen screen)
+        {
+            if (screen == null || !screen.enabled) return false;
+            var simulation = UnityEngine.InputSystem.EnhancedTouch.TouchSimulation.instance;
+            if (simulation != null && simulation.enabled) return true;
+            foreach (var touch in screen.touches)
+                if (touch.press.isPressed || touch.press.wasReleasedThisFrame) return true;
+            return false;
+        }
+        private void ReadEditorMouse(Mouse mouse)
+        {
+            if (mouse == null || !mouse.enabled || mouse.rightButton.isPressed || mouse.middleButton.isPressed)
+            { editorMousePressed = false; activeGesture = false; return; }
+            Vector2 position = mouse.position.ReadValue();
+            if (mouse.leftButton.wasPressedThisFrame)
+            {
+                editorMousePressed = true;
+                beganOverUI = NodeSelectionController.IsOverUI(position);
+                HandlePointer(position, TouchPhase.Began, workspace.CanInteract);
+            }
+            else if (mouse.leftButton.wasReleasedThisFrame && editorMousePressed)
+            {
+                editorMousePressed = false;
+                if (!beganOverUI && !workspace.HasWorkspace && !NodeSelectionController.IsOverUI(position))
+                    workspace.TryPlaceWorkspace(position);
+                HandlePointer(position, TouchPhase.Ended, workspace.CanInteract);
+            }
+            else if (editorMousePressed && mouse.leftButton.isPressed)
+                HandlePointer(position, TouchPhase.Moved, workspace.CanInteract);
+        }
+        private void OnDisable() { editorMousePressed = false; activeGesture = false; finger = -1; }
+#endif
         public void ReadTouchscreen(Touchscreen screen)
         {
             if (screen == null) { activeGesture = false; finger = -1; return; }

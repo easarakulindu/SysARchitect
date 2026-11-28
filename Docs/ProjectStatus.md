@@ -17,6 +17,16 @@ with one-worker/1 GB limits; see [crash recovery and delivery](AndroidBuildRecov
 Physical Android AR/audio acceptance remains unverified.
 Unrelated untracked voice models and `dotnet-tools.json` remain untouched.
 
+**Editor mouse placement correction (November 28):** reproduced a tracked workspace
+with zero nodes after an ordinary mouse click when touch emulation was disabled.
+The shared touch adapter now accepts Editor mouse gestures, with touch ownership,
+UI-origin and camera-navigation guards. Fresh **58 Play Mode and 17 focused Edit Mode
+tests passed**, including
+mouse placement/dragging/connections/deletion, idle touchscreen and simultaneous
+touch/mouse cases, plus existing desktop/Virtual/XR and learning regressions.
+See [the updated Editor procedure](XRSimulationStabilization.md#repeatable-editor-demonstration).
+This is Editor-only input support; the signed 0.12.0 APK is unchanged.
+
 **XR lifecycle stabilization (November 1):** confirmed and repaired removal of an
 anchor before its provider addition was acknowledged. Cancellation/mode switching
 now drains owned anchor changes before shutdown. The combined no-plane timeout

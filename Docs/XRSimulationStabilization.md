@@ -112,24 +112,30 @@ harness corrections; production touch and resource logic were unchanged.
 
 ## Repeatable Editor demonstration
 
+The procedure below includes the November 28 automatic placement and direct Editor
+mouse support. See the later correction record for the new regression evidence.
+
 1. Use Unity **6000.6.5f1** with the existing packages. Open
    `Assets/SysARchitect/Scenes/ARWorkspace.unity`. In XR Plug-in Management's
    Standalone tab, retain the existing Simulation loader. Window > XR > AR Foundation
    > XR Environment shows the existing DefaultSimulationEnvironment fallback.
-2. For mouse taps, enable Window > Analysis > Input Debugger > Options > **Simulate
-   Touch Input From Mouse or Pen**. Press Play and focus the Game view. Hold right
-   mouse and use WASD / Q / E to scan; Shift moves faster. Release navigation input
-   and left-click a highlighted upward horizontal plane. Wait for Workspace tracked.
-3. Press **Reposition workspace** and click a detected surface again. Existing
-   architecture is retained. Cancellation during creation is now covered as well.
-4. **Toolbox > Components > Frontend**; tap an empty point inside the tabletop.
+2. Stop Play and let scripts compile. For ordinary mouse testing, leave Window >
+   Analysis > Input Debugger > Options > **Simulate Touch Input From Mouse or Pen**
+   off. The workspace now accepts mouse input directly in the Editor. Press Play
+   and focus the Game view. Hold right mouse and use WASD / Q / E to scan; Shift
+   moves faster. Release navigation input and keep a detected horizontal white
+   plane in view. The workspace anchors automatically; wait for its white boundary.
+3. Press **Reposition workspace** and keep a detected surface in view again.
+   Existing architecture is retained; re-anchoring is automatic.
+4. **Toolbox > Components > Frontend**; close the toolbox and left-click an empty
+   point inside the white boundary. Other detected white areas are not editing bounds.
    Repeat for Backend and Database, leaving space between them. **Hide details**
    clears selection if the inspector covers a point you want to tap.
-5. **Toolbox > Edit / Connect > Connect source > target**; tap Frontend then Backend.
-   Choose Connect again and tap Backend then Database. Confirm two directed arrows.
+5. **Toolbox > Edit / Connect > Connect source > target**; click Frontend then Backend.
+   Choose Connect again and click Backend then Database. Confirm two directed arrows.
 6. **Simulation > Run**, using 30 requests/s. Scroll the simulation panel to see
    Sent / Success / Failed / In flight and latency. After at least 20 successes,
-   Pause, close the Simulation panel and inspect the nodes' CPU/RAM bars; tap a node
+   Pause, close the Simulation panel and inspect the nodes' CPU/RAM bars; click a node
    for its inspector. Counters satisfy sent = success + failed + in flight.
 7. **Lessons / Progress** opens the current guided lesson. Use **Next step** and
    **Previous step** to see changing headings, instructions and explanations.
@@ -141,8 +147,8 @@ harness corrections; production touch and resource logic were unchanged.
 To repeat the automated complete sequence in a separate validation checkout:
 
 ```sh
-BEE_BUILD_THREADS=2 /home/easara/Unity/Hub/Editor/6000.6.5f1/Editor/Unity \
-  -batchmode -job-worker-count 2 -import-worker-count 1 \
+BEE_BUILD_THREADS=1 /home/easara/Unity/Hub/Editor/6000.6.5f1/Editor/Unity \
+  -batchmode -job-worker-count 1 -import-worker-count 1 \
   -projectPath /tmp/SysARchitectValidation -runTests -testPlatform PlayMode \
   -testFilter SysARchitect.Tests.XRSimulationDemonstrationTests \
   -testResults /tmp/sysarchitect-xr-demo-repeat.xml \
@@ -164,3 +170,47 @@ No Android/iOS player build or performance profile was run for this XR correctio
 Existing **0.11.2 APK and Linux demos remain unchanged and predate the XR fix**.
 The prior APK hash still matches its delivery record. Scenes, packages, .meta GUIDs,
 unrelated materials, dotnet-tools.json and .agents were preserved; nothing pushed.
+
+## Editor mouse placement correction — November 28, 2026
+
+The reported white planes and white workspace boundary were consistent with a
+successfully anchored workspace. A real-provider regression reproduced the remaining
+failure: with mouse-to-touch emulation disabled, selecting Frontend and clicking
+inside that boundary produced **zero nodes instead of one**. `WorkspaceTouchInput`
+disabled the builder controllers' own pointer readers but read only a touchscreen.
+An ordinary Editor mouse therefore never reached the existing placement commands.
+
+The same adapter now forwards Editor left-button gestures to those commands. Active
+touch input or enabled touch emulation takes precedence, while an idle touchscreen
+does not block the mouse. Right/middle-button navigation cancels editing, and a
+gesture beginning over UI cannot place a node after leaving the panel. This support
+is guarded by `UNITY_EDITOR`; Android retains its existing touch path.
+
+Verified sequentially in Unity **6000.6.5f1**, Standalone Linux64, in
+`/tmp/SysARchitectValidation`, with one job worker and one import worker:
+
+- Baseline mouse regression: **1 failed**, expected one node, actual zero, after
+  real simulated tracking, plane detection and anchoring.
+- Final complete Play Mode suite: **58 passed, 0 failed, 0 skipped**, process exit 0.
+  The new test queues mouse/touch device events through normal production `Update`:
+  placement, idle touchscreen, UI-origin drag rejection, navigation guard,
+  connection creation, selection, movement, node/edge cleanup and simultaneous
+  touch/mouse duplicate prevention. Existing real-provider XR lifecycle/demo,
+  desktop, Virtual Workspace, simulation and learning cases also passed.
+- Focused Edit Mode suite: **17 passed, 0 failed, 0 skipped**, process exit 0.
+  Filter: `MobileInputTests|AutomaticSurfaceScaleTests|MobileSceneWiringTests|MobileSafeAreaTests`.
+
+XML and Editor logs are preserved outside Assets in ignored
+`Builds/XRMouseInputEvidence/`. The successful runs used current installed package
+caches; an earlier harness launch referenced a superseded SDK cache, and another
+used Android-only input settings left in the validation copy. Neither attempt is
+counted as an application regression. The validation copy's input setting was
+restored to the real project's Both setting before the valid baseline and final runs.
+Unrelated package migration edits in the real project remain uncommitted.
+
+These are automated Editor XR Simulation checks with programmatically driven camera
+poses and synthetic input, not a human mouse walkthrough or physical AR testing.
+The repeatable procedure above is the next manual acceptance check. The current
+signed **0.12.0** APK remains at `Builds/Android-GlassNarration/SysARchitect.apk`;
+this Editor-only correction does not require rebuilding it. Previous APKs, Linux
+demos, scenes and unrelated user files were preserved.
