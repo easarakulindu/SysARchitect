@@ -117,7 +117,7 @@ namespace SysARchitect.Visualization
             rootRenderer.enabled = !Expanded;
             rootCollider.center = originalBounds.center; rootCollider.size = originalBounds.size;
             if (!Expanded) return;
-            if (memberMesh == null) memberMesh = ProceduralMeshGenerator.GenerateMesh(NodeType.Database);
+            if (memberMesh == null) memberMesh = ProceduralMeshGenerator.GenerateHolographicMesh(NodeType.Database);
             enclosure = new GameObject("Database enclosure");
             enclosure.transform.SetParent(transform, false);
             accessPort = new GameObject("Database request port").transform;

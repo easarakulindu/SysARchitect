@@ -27,3 +27,26 @@ This is automated Editor simulation, not physical Android AR verification.
 
 Registry connectivity delayed initial validation; the copy resolved installed
 package sources locally. No production package manifests/settings were changed.
+
+## Polished infrastructure glass
+
+The existing hardware shader/material now uses transparent blending, view-dependent
+Fresnel rims, sharp studio highlights and URP environment reflections. Box bodies
+have chamfered edges, and database drums have 40 sides. Hardware detail strips,
+selection/failure accents, labels, arrows and resource gauges remain legible; gauge
+fills stay opaque. Expanded database members reuse the detailed glass mesh, and
+Docker/Kubernetes enclosures retain their existing bounded ownership and selection.
+There are no additional per-node GameObjects, draw passes or screen/depth copies
+for this treatment. This is stylized mobile glass, without optical refraction.
+
+Final glass validation: **96 Edit Mode tests passed**, including outward-facing
+beveled mesh geometry and real transparent enclosure assets; **10 focused Play
+Mode tests passed**, covering all ten infrastructure types, indicators, database
+exploration and existing mobile layouts. A separate synchronous-shader capture
+test also passed, and its 1280x720 render was inspected.
+Evidence: `/tmp/sysarchitect-glass-final-edit.xml`,
+`/tmp/sysarchitect-glass-reflection-play.xml`, `/tmp/sysarchitect-glass-capture-play.xml`;
+image `/tmp/DefaultCompany/SysARchitect/sysarchitect-glass-models.png`.
+The old enclosure regression's URP-specific keyword assertion was replaced with
+the dedicated shader's transparent render-tag contract; its blend/depth/asset-alpha
+checks remain. No physical-device performance claim is made.

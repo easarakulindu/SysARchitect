@@ -55,7 +55,19 @@ namespace SysARchitect.Visualization
             }
             void Box(Vector3 size, Vector3 at, Color color) => Append(GenerateBox(size.x, size.y, size.z, "Hardware detail"), at, color);
             void Ring(float radius, float y) => Append(GenerateCylinder(16, radius, .012f, "Storage band"), new Vector3(0, y, 0), glow);
-            Append(GenerateMesh(type), Vector3.zero, shell);
+            Mesh body = GenerateMesh(type);
+            if (type == NodeType.Backend || type == NodeType.Cache || type == NodeType.Container || type == NodeType.DockerHost)
+            {
+                var size = body.bounds.size;
+                if (Application.isPlaying) Object.Destroy(body); else Object.DestroyImmediate(body);
+                body = GenerateBeveledBox(size);
+            }
+            else if (type == NodeType.Database)
+            {
+                if (Application.isPlaying) Object.Destroy(body); else Object.DestroyImmediate(body);
+                body = GenerateCylinder(40, .15f, .25f, "Polished database");
+            }
+            Append(body, Vector3.zero, shell);
             switch (type)
             {
                 case NodeType.Frontend:
@@ -232,6 +244,41 @@ namespace SysARchitect.Visualization
             mesh.RecalculateNormals();
             mesh.RecalculateBounds();
             return mesh;
+        }
+
+        // Chamfered body edges catch glass highlights without adding GameObjects or draw calls.
+        private static Mesh GenerateBeveledBox(Vector3 size)
+        {
+            var vertices = new List<Vector3>(); var normals = new List<Vector3>(); var triangles = new List<int>();
+            Vector3 h = size * .5f;
+            float bevel = Mathf.Min(size.x, Mathf.Min(size.y, size.z)) * .09f;
+            void Face(params Vector3[] points)
+            {
+                Vector3 normal = Vector3.Cross(points[1] - points[0], points[2] - points[0]).normalized;
+                if (Vector3.Dot(normal, points[0]) < 0) { System.Array.Reverse(points); normal = -normal; }
+                int start = vertices.Count;
+                foreach (var point in points) { vertices.Add(point); normals.Add(normal); }
+                for (int i = 1; i < points.Length - 1; i++) { triangles.Add(start); triangles.Add(start + i); triangles.Add(start + i + 1); }
+            }
+            Vector3 Point(int axis, float a, float b, float c) => axis == 0 ? new Vector3(a, b, c)
+                : axis == 1 ? new Vector3(c, a, b) : new Vector3(b, c, a);
+            for (int axis = 0; axis < 3; axis++)
+            {
+                float a = h[axis], b = h[(axis + 1) % 3], c = h[(axis + 2) % 3];
+                foreach (int sign in new[] { -1, 1 })
+                    Face(Point(axis, sign * a, -b + bevel, -c + bevel), Point(axis, sign * a, b - bevel, -c + bevel),
+                        Point(axis, sign * a, b - bevel, c - bevel), Point(axis, sign * a, -b + bevel, c - bevel));
+                foreach (int sb in new[] { -1, 1 }) foreach (int sc in new[] { -1, 1 })
+                    Face(Point(axis, -a + bevel, sb * b, sc * (c - bevel)), Point(axis, a - bevel, sb * b, sc * (c - bevel)),
+                        Point(axis, a - bevel, sb * (b - bevel), sc * c), Point(axis, -a + bevel, sb * (b - bevel), sc * c));
+            }
+            foreach (int x in new[] { -1, 1 }) foreach (int y in new[] { -1, 1 }) foreach (int z in new[] { -1, 1 })
+                Face(new Vector3(x * h.x, y * (h.y - bevel), z * (h.z - bevel)),
+                    new Vector3(x * (h.x - bevel), y * h.y, z * (h.z - bevel)),
+                    new Vector3(x * (h.x - bevel), y * (h.y - bevel), z * h.z));
+            var mesh = new Mesh { name = "Beveled glass body" };
+            mesh.SetVertices(vertices); mesh.SetNormals(normals); mesh.SetUVs(0, new List<Vector2>(new Vector2[vertices.Count]));
+            mesh.SetTriangles(triangles, 0); mesh.RecalculateBounds(); return mesh;
         }
 
         /// <summary>

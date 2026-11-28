@@ -10,7 +10,9 @@ namespace SysARchitect.Tests
         {
             var material = Resources.Load<Material>("WorkloadGlass");
             Assert.That(material, Is.Not.Null);
-            Assert.That(material.IsKeywordEnabled("_SURFACE_TYPE_TRANSPARENT"), Is.True);
+            // The dedicated glass shader is always transparent; it has no strippable URP variant.
+            Assert.That(material.shader.name, Is.EqualTo("SysARchitect/HolographicHardware"));
+            Assert.That(material.GetTag("RenderType", false), Is.EqualTo("Transparent"));
             Assert.That(material.renderQueue, Is.EqualTo(3000));
             Assert.That(material.GetFloat("_ZWrite"), Is.EqualTo(0));
             Assert.That(material.GetFloat("_SrcBlend"), Is.EqualTo((float)UnityEngine.Rendering.BlendMode.SrcAlpha));

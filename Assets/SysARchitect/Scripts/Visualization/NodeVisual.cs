@@ -159,6 +159,7 @@ namespace SysARchitect.Visualization
                 var renderer = go.GetComponent<MeshRenderer>(); renderer.sharedMaterial = m_MeshRenderer.sharedMaterial;
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; renderer.receiveShadows = false;
                 var block = new MaterialPropertyBlock(); block.SetColor(k_BaseColorId, color); block.SetColor(k_EmissionColorId, color * .15f);
+                block.SetFloat("_Opacity", 1); // Resource readings remain solid and legible over glass.
                 renderer.SetPropertyBlock(block); return go.transform;
             }
             Bar("CPU track", 0, new Color(.03f, .06f, .1f));

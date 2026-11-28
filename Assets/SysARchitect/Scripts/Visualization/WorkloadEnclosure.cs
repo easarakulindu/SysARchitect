@@ -46,7 +46,7 @@ namespace SysARchitect.Visualization
             glassMaterial.SetFloat("_Surface", 1); glassMaterial.SetFloat("_ZWrite", 0);
             glassMaterial.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
             glassMaterial.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-            glassMaterial.EnableKeyword("_SURFACE_TYPE_TRANSPARENT"); glassMaterial.renderQueue = 3000;
+            glassMaterial.renderQueue = 3000;
             var renderer = glass.GetComponent<MeshRenderer>(); renderer.sharedMaterial = glassMaterial;
             renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off; renderer.receiveShadows = false;
             Refresh();

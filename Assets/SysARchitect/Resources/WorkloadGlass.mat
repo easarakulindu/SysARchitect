@@ -21,11 +21,10 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: WorkloadGlass
-  m_Shader: {fileID: 4800000, guid: 650dd9526735d5b46b79224bc6e94025, type: 3}
+  m_Shader: {fileID: 4800000, guid: 4a1d2b4a8009b470a9d6288e1cf6e3cc, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords:
-  - _SURFACE_TYPE_TRANSPARENT
+  m_ValidKeywords: []
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -58,6 +57,8 @@ Material:
     - _Cutoff: 0.5
     - _DstBlend: 10
     - _DstBlendAlpha: 0
+    - _HardwareDetails: 0
+    - _Opacity: 1
     - _QueueOffset: 0
     - _SampleGI: 0
     - _SrcBlend: 5
@@ -68,5 +69,6 @@ Material:
     m_Colors:
     - _BaseColor: {r: 0.1, g: 0.55, b: 0.95, a: 0.065}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _EmissionColor: {r: 0, g: 0.29999998, b: 0.39999998, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
