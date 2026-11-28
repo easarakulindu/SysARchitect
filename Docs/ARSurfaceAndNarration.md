@@ -110,3 +110,9 @@ were preserved. Unrelated untracked `dotnet-tools.json` and
 Recovery subsequently found copies of those models in the validation/exported inputs;
 these copies were moved aside before packaging, and APK inspection confirmed no
 model files were shipped. The original repository files remain untouched. `.agents` remains ignored.
+
+The subsequent host out-of-memory interruption was recovered; see
+[the exact diagnosis, safer build defaults and final signed 0.12.0 APK](AndroidBuildRecovery2026-11-28.md).
+The normal Unity Android build then exited 0 using commit `f32e0d3`. Delivery is
+`Builds/Android-GlassNarration/SysARchitect.apk`; existing APKs/Linux builds remain
+preserved. Physical device AR/audio acceptance is still pending.

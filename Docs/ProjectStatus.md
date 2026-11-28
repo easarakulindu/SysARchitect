@@ -10,8 +10,11 @@ English recordings with pinned replay/pause/mute controls; navigation, progress,
 quiz scores and simulation remain separate. Current source passed **102 Edit Mode /
 57 Play Mode tests**, including the real XR Simulation sequence and four phone layouts.
 See [behavior, evidence and limitations](ARSurfaceAndNarration.md) and
-[voice provenance/regeneration](LessonNarrationVoice.md). Android 0.12.0 is configured;
-the new build is pending. Physical Android AR/audio acceptance remains unverified.
+[voice provenance/regeneration](LessonNarrationVoice.md). Signed **Android 0.12.0** is
+verified at `Builds/Android-GlassNarration/SysARchitect.apk`, built from `f32e0d3`.
+The interrupted packaging was recovered, and the normal Unity build then passed
+with one-worker/1 GB limits; see [crash recovery and delivery](AndroidBuildRecovery2026-11-28.md).
+Physical Android AR/audio acceptance remains unverified.
 Unrelated untracked voice models and `dotnet-tools.json` remain untouched.
 
 **XR lifecycle stabilization (November 1):** confirmed and repaired removal of an

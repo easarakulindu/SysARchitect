@@ -55,3 +55,42 @@ packaged audio data, not listening through physical phone speakers.
 
 Existing APKs and the Linux demo remain preserved. No physical AR, phone audio,
 iOS deployment or device profiling is claimed. No remote pushes were made.
+
+## Verified final Unity build
+
+After committing the resource limits as **`f32e0d3`**, the normal Unity Android build
+was rerun using the existing native cache. **Unity exited 0**, and its generated
+Gradle project confirms `org.gradle.workers.max=1`, `org.gradle.parallel=false`,
+`org.gradle.daemon=false`; the actual Gradle invocation used `-Xmx1024m`.
+The post-generation callback was invoked by Unity, not only compiled.
+
+- Final APK: **`Builds/Android-GlassNarration/SysARchitect.apk`**.
+- Version **0.12.0**, **38,802,820 bytes**.
+- SHA-256: `413f6f16e3e2e4b6a156c5bc12860a26007831724410ca3169c0da723fed70e1`.
+- Source revision: `f32e0d3031a24cfb358edea95e4f07dd88d7dfe1`.
+- Built UTC: `2026-11-28T12:48:38.6369940Z`.
+- Unity scene dependency hash: `8d6d891c166db195b89b0e4e397839d9`.
+- Signature verified again; same testing certificate as the earlier APK.
+- Manifest: optional ARCore, no required `android.hardware.camera.ar`, API 26–36,
+  ARM64 only. ZIP CRC passed; all 20 clip names/transcript hashes and 20 FSB5
+  sound-bank headers were found; no unrelated voice-model files were packaged.
+
+The Unity summary's 850,240,977 bytes includes intermediate/back-up build data;
+it is not the actual APK size. Build info, signature, manifest and package checks
+are saved beside the APK. Recovery logs are in `Builds/TeachingPresentationEvidence/Recovery/`.
+The earlier 102/57 test results were recovered and checked, not rerun: runtime and
+educational content are unchanged; the new build-helper code was freshly compiled
+and exercised by this successful full build. The recovered APK is retained separately.
+
+Install/update using the installed SDK, preserving app data:
+
+```bash
+/home/easara/Unity/Hub/Editor/6000.6.5f1/Editor/Data/PlaybackEngines/AndroidPlayer/SDK/platform-tools/adb install -r /home/easara/SysARchitect/Builds/Android-GlassNarration/SysARchitect.apk
+```
+
+On a supported AR device, scan a textured horizontal surface and keep its white
+overlay in view until the workspace anchors. Place components inside the white
+boundary. Reposition retains the architecture and resumes automatic placement.
+Unsupported devices use the labelled Virtual Workspace; its tests do not establish
+physical AR behavior. Open Lessons / Progress or choose a topic to hear English
+narration; use Next/Previous step, Replay, Pause/Resume and Mute.
