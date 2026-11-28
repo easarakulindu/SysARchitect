@@ -26,6 +26,7 @@ namespace SysARchitect.AR
         [SerializeField, Min(0)] private float surfaceStabilitySeconds = .8f;
         private readonly List<ARRaycastHit> hits = new List<ARRaycastHit>();
         private ARPlane candidatePlane;
+        private Material boundaryMaterial;
         private Vector3 candidateCenter;
         private float candidateSince;
         private ARAnchor anchor;
@@ -41,11 +42,30 @@ namespace SysARchitect.AR
         public bool HasWorkspace => Mode == WorkspaceMode.Virtual || anchor != null;
         public bool CanInteract => Mode == WorkspaceMode.Virtual || (anchor != null && TrackingAllowsInput(ARSession.state == ARSessionState.SessionTracking, anchor.trackingState == TrackingState.Tracking));
         public static bool TrackingAllowsInput(bool sessionTracking, bool anchorTracking) => sessionTracking && anchorTracking;
+        public static float WorkspaceScaleForSurface(Vector2 size)
+        {
+            if (!(size.x >= .15f && size.y >= .15f) || float.IsInfinity(size.x) || float.IsInfinity(size.y)) return 0;
+            return Mathf.Min(.35f, Mathf.Min(size.x, size.y) * .9f / 2.4f);
+        }
 
         private void Start()
         {
             graph.gameObject.SetActive(false);
             if (workspaceSurface != null) workspaceSurface.enabled = false;
+            if (workspaceSurface != null)
+            {
+                // Outline the existing editing bounds without adding a platform or extra GameObject.
+                var boundary = graph.GetComponent<LineRenderer>();
+                if (boundary == null) boundary = graph.gameObject.AddComponent<LineRenderer>();
+                boundaryMaterial = new Material(Resources.Load<Material>("WorkloadGlass"));
+                boundaryMaterial.SetColor("_BaseColor", new Color(1, 1, 1, .85f));
+                boundaryMaterial.SetColor("_EmissionColor", Color.black);
+                boundaryMaterial.SetFloat("_Opacity", 1); boundaryMaterial.SetFloat("_HardwareDetails", 0);
+                boundary.sharedMaterial = boundaryMaterial; boundary.useWorldSpace = false;
+                boundary.widthMultiplier = .003f; boundary.loop = true; boundary.positionCount = 4;
+                boundary.SetPositions(new[] { new Vector3(-1.2f, .003f, -1.2f), new Vector3(1.2f, .003f, -1.2f),
+                    new Vector3(1.2f, .003f, 1.2f), new Vector3(-1.2f, .003f, 1.2f) });
+            }
             arCullingMask = workspaceCamera.cullingMask;
             Application.targetFrameRate = 60;
 #if ENABLE_LEGACY_INPUT_MANAGER
@@ -132,9 +152,9 @@ namespace SysARchitect.AR
                 : Mode == WorkspaceMode.Checking ? "Checking AR availability… Virtual / AR opens the non-AR workspace now."
                 : ARSession.state != ARSessionState.SessionTracking ? $"AR: {ARSession.state}. Move slowly and scan a well-lit textured surface. {ARSession.notTrackingReason}"
                 : placing ? "Creating surface anchor…"
-                : !HasWorkspace ? message ?? "Scan a horizontal surface. Hold the camera toward a white detected plane; the workspace anchors automatically."
+                : !HasWorkspace ? message ?? "Scan a horizontal surface. Keep a white detected plane in view; the workspace anchors automatically."
                 : !CanInteract ? "Workspace tracking lost. Move back toward the surface; editing and simulation are paused."
-                : "Workspace tracked. Toolbox: choose a component, then tap the workspace. Select: tap nodes/lines; drag nodes. Connect: tap two nodes.";
+                : "Workspace tracked. Place components inside the white boundary. Select: tap nodes/lines; drag nodes. Connect: tap two nodes.";
         }
         public void TryPlaceWorkspace(Vector2 screenPosition)
         {
@@ -149,21 +169,24 @@ namespace SysARchitect.AR
         {
             if (Mode != WorkspaceMode.AugmentedReality || HasWorkspace || placing || anchorOperations > 0 ||
                 ARSession.state != ARSessionState.SessionTracking) { candidatePlane = null; return; }
-            // Use the real polygon under the camera's aim, rather than anchoring an off-screen floor.
-            var aim = workspaceCamera.ViewportToScreenPoint(new Vector3(.5f, .5f));
+            // Automatic placement needs a visible tracked surface, not a precise centre-screen tap.
             ARPlane target = null;
-            if (raycasts.Raycast(aim, hits, TrackableType.PlaneWithinPolygon))
+            float bestArea = 0;
+            foreach (var plane in planes.trackables)
             {
-                var plane = planes.GetPlane(hits[0].trackableId);
-                // The shared editing bounds are 2.4 model units at 0.35 metres per unit.
-                if (plane != null && plane.isActiveAndEnabled && plane.subsumedBy == null &&
-                    plane.alignment == PlaneAlignment.HorizontalUp && plane.trackingState == TrackingState.Tracking &&
-                    plane.size.x >= .84f && plane.size.y >= .84f) target = plane;
+                if (plane == null || !plane.isActiveAndEnabled || plane.subsumedBy != null ||
+                    plane.alignment != PlaneAlignment.HorizontalUp || plane.trackingState != TrackingState.Tracking ||
+                    WorkspaceScaleForSurface(plane.size) <= 0) continue;
+                Vector3 view = workspaceCamera.WorldToViewportPoint(plane.center);
+                if (view.z <= 0 || view.x < .05f || view.x > .95f || view.y < .05f || view.y > .95f) continue;
+                if (plane == candidatePlane) { target = plane; break; }
+                float area = plane.size.x * plane.size.y;
+                if (area > bestArea) { bestArea = area; target = plane; }
             }
             if (target == null)
             {
                 candidatePlane = null;
-                message = "Scan a horizontal surface at least 84 cm wide. Aim at its white overlay for automatic placement.";
+                message = "Scan a wider horizontal surface. Keep a white detected plane in view for automatic placement.";
                 return;
             }
             if (candidatePlane != target || Vector3.Distance(candidateCenter, target.center) > .05f)
@@ -175,10 +198,11 @@ namespace SysARchitect.AR
             if (Time.unscaledTime - candidateSince >= surfaceStabilitySeconds)
             {
                 candidatePlane = null;
-                BeginAnchor(new Pose(target.center, target.transform.rotation));
+                float scale = WorkspaceScaleForSurface(target.size);
+                BeginAnchor(new Pose(target.center, target.transform.rotation), scale);
             }
         }
-        private async void BeginAnchor(Pose pose)
+        private async void BeginAnchor(Pose pose, float workspaceScale = .35f)
         {
             placing = true;
             int revision = placementRevision;
@@ -199,7 +223,7 @@ namespace SysARchitect.AR
                 graph.transform.SetParent(anchor.transform, false);
                 graph.transform.localPosition = Vector3.zero;
                 graph.transform.localRotation = Quaternion.identity;
-                graph.transform.localScale = Vector3.one * .35f;
+                graph.transform.localScale = Vector3.one * workspaceScale;
                 graph.gameObject.SetActive(true);
                 // Keep detected white surfaces visible; the AR workspace uses their overlay.
             }
@@ -237,6 +261,7 @@ namespace SysARchitect.AR
             SetARActive(false);
             if (Mode == WorkspaceMode.Virtual) ResetVirtualView();
         }
+        private void OnDestroy() { if (boundaryMaterial != null) Destroy(boundaryMaterial); }
         public void Reposition()
         {
             simulation.Pause();

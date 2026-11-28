@@ -99,6 +99,7 @@ namespace SysARchitect.Tests
             var graph = Object.FindAnyObjectByType<ArchitectureGraph>(FindObjectsInactive.Include);
             var surface = graph.transform.Find("Anchored Workspace Surface");
             Assert.That(surface.GetComponent<Renderer>().enabled, Is.False);
+            Assert.That(graph.GetComponent<LineRenderer>().enabled, Is.True);
             Assert.That(surface.GetComponent<Collider>().enabled, Is.True, "Editing bounds remain available");
             for (int cycle = 0; cycle < 2; cycle++)
             {
@@ -106,12 +107,26 @@ namespace SysARchitect.Tests
                 float deadline = Time.realtimeSinceStartup + 20;
                 while (!workspace.HasWorkspace && Time.realtimeSinceStartup < deadline)
                 {
-                    var plane = Up(planes);
+                    ARPlane plane = null;
+                    foreach (var tracked in planes.trackables)
+                        if (tracked.alignment == PlaneAlignment.HorizontalUp && tracked.size.x >= .15f && tracked.size.y >= .15f &&
+                            tracked.subsumedBy == null && tracked.trackingState == TrackingState.Tracking &&
+                            (plane == null || tracked.size.sqrMagnitude > plane.size.sqrMagnitude)) plane = tracked;
                     if (plane != null) pose.transform.rotation = Quaternion.LookRotation(plane.center - pose.transform.position);
+                    else pose.transform.rotation = Quaternion.Euler(65, 0, 0);
                     yield return null;
                 }
-                Assert.That(workspace.HasWorkspace && workspace.CanInteract, Is.True, "Automatic anchor requires no pointer event");
+                string surfaces = "";
+                foreach (var tracked in planes.trackables) surfaces += $" [{tracked.alignment}, {tracked.size}, {tracked.trackingState}]";
+                Debug.Log("Automatic placement cycle " + cycle + ": " + workspace.HasWorkspace + surfaces);
+                Assert.That(workspace.HasWorkspace && workspace.CanInteract, Is.True, "Automatic anchor requires no pointer event. Detected:" + surfaces);
                 Assert.That(graph.transform.parent.GetComponent<ARAnchor>().pending, Is.False);
+                float largestShortSide = 0;
+                foreach (var tracked in planes.trackables)
+                    if (tracked.alignment == PlaneAlignment.HorizontalUp && tracked.trackingState == TrackingState.Tracking)
+                        largestShortSide = Mathf.Max(largestShortSide, Mathf.Min(tracked.size.x, tracked.size.y));
+                Assert.That(graph.transform.lossyScale.x * 2.4f, Is.LessThanOrEqualTo(Mathf.Min(.84f, largestShortSide * .9f) + .01f),
+                    "The visible workspace must fit compact surfaces without changing its logical editing bounds");
                 Assert.That(planes.enabled, Is.True);
                 var overlay = Up(planes).GetComponent<Renderer>();
                 Assert.That(overlay.enabled, Is.True);
