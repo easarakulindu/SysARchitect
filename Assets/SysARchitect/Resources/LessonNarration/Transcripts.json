@@ -1,0 +1,126 @@
+{
+  "clips": [
+    {
+      "resource": "LessonNarration/ClientServer-1",
+      "text": "Client-server architecture. The frontend presents the application and initiates requests. A backend applies application logic; a database stores records. Separating these responsibilities lets each tier change independently, but every dependency adds latency and can fail. Arrows here show logical requests; replies are implicit. Placing components alone does not connect them. A successful read can return no record without being a transport failure.\n\nStep 1 of 4. Inspect the three tiers. Load the example: three disconnected nodes. Close the guide to use the builder.\n\nThe example deliberately starts disconnected. Frontend, Backend and Database have different jobs; placing them does not create a request path. Loading an example is an explicit action that replaces your workspace.",
+      "seconds": 53.295,
+      "audioSha256": "0d76913cd4b97e0743cdd0c9300507b62a5bc6f497a70199419de9067da6fa70"
+    },
+    {
+      "resource": "LessonNarration/ClientServer-2",
+      "text": "Step 2 of 4. Connect the request path. Connect Frontend to Backend, then Backend to Database. Use source-first order.\n\nA directed Frontend-to-Backend link reaches application logic; Backend-to-Database reaches storage. Connect the actual nodes before running. Replies are implicit, so a second reverse arrow is unnecessary.",
+      "seconds": 22.741,
+      "audioSha256": "d043e2cd4378a47add84c3274160995c0121bfda1dca40b92a187649c66d274c"
+    },
+    {
+      "resource": "LessonNarration/ClientServer-3",
+      "text": "Step 3 of 4. Measure work through each tier. Run at 30 requests per second. Select nodes to compare CPU, queues, latency and database reads/writes.\n\nRun or Step the simulation explicitly. CPU, queue length and latency report actual work at the selected node. Database reads and writes demonstrate that traffic reached storage rather than stopping at a disconnected tier.",
+      "seconds": 27.118,
+      "audioSha256": "6cc19cbae34adf6d050154363704de3f38aaed5278cecd9d4738cb4cfa6bc5ac"
+    },
+    {
+      "resource": "LessonNarration/ClientServer-4",
+      "text": "Step 4 of 4. Verify end-to-end success. Reopen this guide and Check challenge after at least 20 successes.\n\nCheck challenge evaluates the connected architecture and at least 20 successful requests, including reads and writes. Reading this instruction does not submit requests or complete the challenge.",
+      "seconds": 20.406,
+      "audioSha256": "4474f9b416b780ea0cb0b78843d4c0f60b2dbbe871f6c2c9f92b5e8e3f856f60"
+    },
+    {
+      "resource": "LessonNarration/LoadBalancing-1",
+      "text": "Load balancing and horizontal scaling. An application load balancer selects one healthy backend for each request. More backend instances can increase aggregate processing capacity, provided the frontend, balancer and database have headroom. A balancer alone creates no capacity. Our round-robin policy skips unavailable instances; surviving servers can still overload after a failure. Horizontal scaling adds instances, while vertical scaling increases one instance's capacity.\n\nStep 1 of 4. Find the capacity bottleneck. The example has one 40 requests per second backend behind an application balancer and 80 requests per second traffic.\n\nThe example offers 80 requests per second to one 40 requests per second backend. The application balancer can choose a target, but cannot create processing capacity. Watch the backend queue and overload under this offered load.",
+      "seconds": 59.958,
+      "audioSha256": "6142c9557ad493414f1029a6e2a31367f632f56e07689bc02f9f82b220d30ea4"
+    },
+    {
+      "resource": "LessonNarration/LoadBalancing-2",
+      "text": "Step 2 of 4. Add a second processing instance. Add a second Backend. Connect Load Balancer to second Backend and second Backend to Database.\n\nConnect the added backend to both the application balancer and storage. Two 40 requests per second instances provide 80 requests per second of aggregate backend capacity when the other tiers have headroom; each still has its own queue and limits.",
+      "seconds": 26.38,
+      "audioSha256": "143f07ad51a0218ef88a7db91be047ffda09cf6b59826f9e04f9f047198d809a"
+    },
+    {
+      "resource": "LessonNarration/LoadBalancing-3",
+      "text": "Step 3 of 4. Observe healthy-target failover. Run until both backends process at least 20 requests. Select one, Inject failure, and observe traffic reach the other.\n\nInject failure explicitly on one backend. New requests skip that unavailable target and reach its healthy sibling. The remaining 40 requests per second instance can still overload; failover does not replace the lost capacity.",
+      "seconds": 28.697,
+      "audioSha256": "f16d8153ef275ae9929682fcbbac68d95e9cc3a13aa8808c3e78275f03c49924"
+    },
+    {
+      "resource": "LessonNarration/LoadBalancing-4",
+      "text": "Step 4 of 4. Recover and verify distribution. Restart the failed backend, advance at least one simulated second, and Check challenge after 100 successes.\n\nRestart explicitly, then Run or Step through recovery. Check challenge requires real work on both backends, observed failover and recovery, and 100 successes. Navigating here does not restart anything.",
+      "seconds": 25.451,
+      "audioSha256": "38217153f98b2d65bedf681de673587255dd0358e05c5e1c9cb6ab8d3d5b025e"
+    },
+    {
+      "resource": "LessonNarration/Database-1",
+      "text": "Database replication and sharding. Replication keeps copies of one logical dataset. In this single-primary model, writes go to the primary and asynchronous copies reach replicas later; reads may be stale during that delay. Replicas can add read capacity but do not multiply primary write capacity. Sharding instead partitions records by a deterministic key rule. Each shard stores only its assigned keys. The same expandable Database models both patterns behind a Database Router. A separate backend-controlled cache-aside path can avoid database reads on repeated cache hits.\n\nStep 1 of 4. Follow the database router. Load the example with Backend to Database Router to Database. Run frontend traffic.\n\nThe Backend sends database requests through a Load Balancer configured for Database Routing. Frontend traffic exercises that connected path; the Database explorer's direct Read/Write controls bypass the router.",
+      "seconds": 62.664,
+      "audioSha256": "8bf248f9bc0e96a109563a03067563a8eca3ca383c653f316b8d67e1edf02ece"
+    },
+    {
+      "resource": "LessonNarration/Database-2",
+      "text": "Step 2 of 4. Compare copies and synchronization lag. Select Database, choose Replication and keep at least two replicas. Observe primary writes, replica reads and pending copies.\n\nSelect Replication explicitly on the Database. Writes use the primary; eligible reads prefer healthy replicas. Copies arrive after the model's 0.5-second delay, so a replica can temporarily return an older result. Replicas do not multiply primary write capacity.",
+      "seconds": 32.708,
+      "audioSha256": "85aa5b394af4166ba4269e4827446ff1b9c45b4faadb1e8b5a79884a34b3e5b9"
+    },
+    {
+      "resource": "LessonNarration/Database-3",
+      "text": "Step 3 of 4. Partition records with shard keys. Choose Sharding on that same Database and set at least three shards. Run until records reach at least two shards.\n\nSwitch that same Database to Sharding explicitly. The normalized key modulo shard count selects a partition deterministically; shards hold different keys rather than copies. Run traffic until at least two of three or more shards contain records.",
+      "seconds": 28.337,
+      "audioSha256": "0789d25bc4d73ee11de7ca6e4a96a72c9e4fd86085e61c91bb728a8bebbcc51c"
+    },
+    {
+      "resource": "LessonNarration/Database-4",
+      "text": "Step 4 of 4. Verify both database configurations. Reopen the guide and Check challenge. Read/Write explorer buttons enter Database directly; frontend traffic demonstrates the router.\n\nCheck challenge observes replication activity and pending-copy lag before checking the later sharded state on the same Database. It does not count a mode change alone. Use frontend requests when demonstrating routing through the Database Router.",
+      "seconds": 28.07,
+      "audioSha256": "217de3624675af9ed04aa680cd38a8ca7614a1aa25e1f05ccf954c7318eac4ff"
+    },
+    {
+      "resource": "LessonNarration/Docker-1",
+      "text": "Docker containers and images. An image is a reusable read-only package used to create container instances. Each container has its own process state, queues and resource limits while sharing a host kernel. This differs from a VM with a separate guest kernel. One container's failure need not crash its siblings, but a shared host remains a common dependency. Our quotas and memory are an educational model of isolation and contention; no real Docker daemon runs.\n\nStep 1 of 4. Create instances from one image. Select the example Docker Host. Create two containers without changing the chosen image.\n\nThe Docker Host panel chooses an image template and creates separate container instances. Two instances from the same image share that template, but have separate identity, state and resource limits. No real Docker daemon is started.",
+      "seconds": 55.495,
+      "audioSha256": "b6baf823079a6781c87d0a3d0e6ab9b31bedddd24e6623a7440cccf841458f3c"
+    },
+    {
+      "resource": "LessonNarration/Docker-2",
+      "text": "Step 2 of 4. Set limits for one container. Choose a container with the member slider and change its CPU quota or memory limit.\n\nChoose one instance with the member slider, then change its CPU quota or memory limit. Those limits affect that instance's simulated processing and memory behavior; the host's finite resources are still shared.",
+      "seconds": 22.194,
+      "audioSha256": "4145b0cbe43f793a5f3bc19dfa81e2629f4aa4fc8bb53ded1a4f2d34ea81f99d"
+    },
+    {
+      "resource": "LessonNarration/Docker-3",
+      "text": "Step 3 of 4. Compare stop/start and crash/restart. Stop it, Start it, and Run/Step through one-second recovery. Then Crash and Restart that same instance.\n\nUse Stop/Start and Crash/Restart explicitly on the chosen instance. Advance simulation time through one-second recovery and observe its state. These controls affect the same instance; changing instruction steps does not execute them.",
+      "seconds": 29.881,
+      "audioSha256": "53df85433f91db3d768c457e407a33d59cbda8f39dcc2eb4b6c358385ac4e16f"
+    },
+    {
+      "resource": "LessonNarration/Docker-4",
+      "text": "Step 4 of 4. Check work on the shared host. Run until at least 20 requests succeed and both instances are available; Check challenge.\n\nRun frontend requests through the host to available containers. Check challenge requires both instances, the changed limit, observed stop/start and crash recovery, and real successes after recovery. A host failure remains a shared dependency.",
+      "seconds": 26.589,
+      "audioSha256": "aed1cdc44cff1790d269e2a5839e41ce1af09acb534fa1924232206fa720c0ff"
+    },
+    {
+      "resource": "LessonNarration/Kubernetes-1",
+      "text": "Kubernetes orchestration and recovery. A cluster contains worker machines. Pods are schedulable groups of one or more containers, and a Deployment describes a desired set of interchangeable application replicas. A controller compares desired and actual state and replaces terminally failed Pods. This replacement maintains the target; it does not increase it. Horizontal Pod Autoscaling requires a separately configured HPA and metrics. This exercise uses manual replica changes, a bounded scheduler and a simulated Service data path, not API-server traffic.\n\nStep 1 of 4. Inspect desired, actual and ready counts. The example has two workers and a deployment target of two. Run/Step until Pods are ready.\n\nThe example has two workers and a desired replica target of two. Actual Pods can exist before they become ready. Run or Step explicitly: readiness takes one simulated second, and only eligible healthy instances serve work.",
+      "seconds": 66.925,
+      "audioSha256": "d7275831473590a8c48e4614bc27ab6efb99161d3160b39e8bcddc88b329201a"
+    },
+    {
+      "resource": "LessonNarration/Kubernetes-2",
+      "text": "Step 2 of 4. Scale the explicit replica target. Set explicit desired replicas to three. Observe actual versus ready counts; new readiness takes one second.\n\nSet desired replicas to three in Kubernetes Explorer. The bounded scheduler creates Pods on workers with capacity; actual and ready counts can lag the target. This is manual scaling, not automatic HPA behavior.",
+      "seconds": 26.758,
+      "audioSha256": "ab11274dfd110e26315c3f20ee09c6f5af015a8bcb7dd055d995971b015167db"
+    },
+    {
+      "resource": "LessonNarration/Kubernetes-3",
+      "text": "Step 3 of 4. Observe replacement with a new identity. Fail a Pod. Note its UID and observe a replacement with a new UID while desired remains three.\n\nFail a Pod explicitly and advance the simulation. The controller removes the terminally failed Pod and creates a replacement with a new identity while desired remains three. Replacement restores the target; it does not increase it.",
+      "seconds": 27.396,
+      "audioSha256": "9c082b96c6b88bfdec693adc87c50c92c832d11cb8b82d7668ff5c78544ac019"
+    },
+    {
+      "resource": "LessonNarration/Kubernetes-4",
+      "text": "Step 4 of 4. Verify readiness and real requests. Run until three Pods are ready and 20 requests succeed, then Check challenge. HPA remains unconfigured.\n\nWait for three ready replicas and at least 20 successful requests, then Check challenge. Traffic uses the simulated Service path, not a real API server. No HPA, real cluster deployment or automatic demonstration action is implied.",
+      "seconds": 29.289,
+      "audioSha256": "0b458e4a54ab86472ed14b8d0c0afa266395710ec96d007b61fd92460aa69755"
+    }
+  ],
+  "generator": "Piper 2023.11.14-2, en_US-ljspeech-high; synthetic English female voice",
+  "modelSha256": "5d4f08ba6a2a48c44592eed3ce56bf85e9de3dd4e20df90541ae68a8310c029a"
+}

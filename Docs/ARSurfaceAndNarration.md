@@ -3,10 +3,16 @@
 ## Automatic AR surface
 
 The existing ARWorkspace now automatically anchors the shared graph after the camera
-aims at a tracked horizontal-up plane with both dimensions at least 0.84 m. The same
-plane must remain within 5 cm of its candidate centre for 0.8 seconds. Actual AR
-polygon raycasts select the visible surface; an off-screen plane is not selected.
-No separate graph or simulation is created. Existing manual placement remains an
+sees a tracked horizontal-up plane with both dimensions at least 0.15 m. The same
+plane must remain within 5 cm of its candidate centre for 0.8 seconds. The plane's
+centre must lie inside the camera view. A valid visible candidate is retained to
+avoid flicker; otherwise the largest eligible visible plane is chosen. An exact
+centre-screen raycast is unnecessary; optional manual placement retains its polygon
+raycasts. Off-screen, subsumed, vertical and untracked planes are excluded.
+The existing graph scales to 90% of the smaller detected dimension, capped at its
+original 0.84 m width. A thin white boundary identifies its unchanged logical editing
+bounds. Scaling changes presentation, not processing capacity or request state.
+No separate graph, simulation or boundary GameObject is created. Existing manual placement remains an
 optional API, and lifecycle fixtures explicitly disable automatic placement while
 testing same-frame manual cancellation.
 
@@ -50,3 +56,55 @@ image `/tmp/DefaultCompany/SysARchitect/sysarchitect-glass-models.png`.
 The old enclosure regression's URP-specific keyword assertion was replaced with
 the dedicated shader's transparent render-tag contract; its blend/depth/asset-alpha
 checks remain. No physical-device performance claim is made.
+
+## English lesson narration
+
+All five lessons have bundled synthetic English teaching audio: **20 distinct
+recordings, 700.4 seconds in total, 4,400,410 bytes of mono Vorbis audio**. Selecting
+or opening a lesson plays its overview and first instruction; Next/Previous step
+replaces that audio with the matching heading, instruction and explanation. Replay,
+pause/resume and mute controls remain pinned beside mobile instruction navigation.
+Closing the guide, loading an example, opening the lesson picker or starting a quiz
+stops narration. App suspension pauses it for explicit resumption. Muting is scoped
+to the current scene; existing saved lesson completion and quiz results are retained.
+
+Playback uses the existing lesson text and Unity AudioSource, without advancing
+instruction steps, creating architecture, driving simulation or using a runtime
+network service. Existing highlights, challenges, examples and quiz scoring remain
+separate. Both saved workspace scenes have one narrator and one source; repeated
+configuration reuses them and their three buttons. Clips are compressed in memory.
+See [voice provenance and regeneration](LessonNarrationVoice.md).
+
+Focused verification: **8 Play Mode tests passed** for actual clip changes across
+all five lessons, forward/backward navigation, pause/replay/mute, closure/quiz stop,
+progress and simulation-clock preservation, and rendered mobile controls at
+1280x720, 1920x1080, 2400x1080 and 2796x1290 with safe-area insets. Captures at
+1280 and 2400 were visually inspected. The complete **97 Edit Mode tests passed**,
+including exact transcript synchronization, distinct audio hashes, durations and
+all earlier data/model tests. Phone speakers, headset output and physical AR have
+not been verified on a connected device.
+
+## Final integrated verification
+
+Current source passed **102 Edit Mode tests and 57 Play Mode tests**, with zero
+failures/skips and editor exit 0. Results: `/tmp/sysarchitect-teaching-final-edit2.xml`
+and `/tmp/sysarchitect-teaching-final-play5.xml`, with matching `.log` files. This
+includes the real-provider XR demonstration and seven XR lifecycle/surface tests,
+all desktop/Virtual editing and request/resource regressions, lessons, quizzes,
+narration and phone layouts. Camera motion and touches are driven by tests.
+
+Intermediate runs are retained. They exposed obsolete URP keyword assertions and
+the initial automatic-placement gate waiting forever on otherwise valid compact
+planes (20 cm and 40x60 cm were observed). Visible-plane selection and adaptive
+scale address that behavior; exact size/bounds checks cover compact and large planes.
+A boundary initialization error during development was repaired using Unity's
+null comparison. Its cancelled isolated editor crashed during shutdown; subsequent
+clean focused/full runs exited 0. No host crash or physical device test is claimed.
+
+Unity processes ran sequentially with two job workers and one import worker.
+Registry-driven toolchain migration was disabled for cached validation. Two
+commands timed out in automatic approval review before execution and succeeded on
+retry. Production package manifests, XR providers and working Linux/APK artifacts
+were preserved. Unrelated untracked `dotnet-tools.json` and
+`Assets/StreamingAssets/VoiceModels/` were preserved and excluded from these commits
+and the isolated validation/build inputs. `.agents` remains ignored.

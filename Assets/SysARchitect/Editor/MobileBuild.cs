@@ -79,8 +79,14 @@ namespace SysARchitect.Editor
                 throw new InvalidOperationException("Install Android Build Support, SDK/NDK and OpenJDK for Unity " + Application.unityVersion);
             bool appBundle = EditorUserBuildSettings.buildAppBundle;
             bool customSigning = PlayerSettings.Android.useCustomKeystore;
+            const string heapKey = "AndroidJVMMaxHeapSize";
+            bool hadHeapPreference = EditorPrefs.HasKey(heapKey);
+            int previousHeap = EditorPrefs.GetInt(heapKey, 4096);
             try
             {
+                // Installed Android extension reads this preference when launching Gradle.
+                // Bound the transient build heap on the 16 GB validation host; restore it below.
+                EditorPrefs.SetInt(heapKey, 2048);
                 EditorUserBuildSettings.buildAppBundle = false;
                 PlayerSettings.Android.useCustomKeystore = false;
                 Build(BuildTarget.Android, "Builds/Android/SysARchitect.apk");
@@ -89,6 +95,7 @@ namespace SysARchitect.Editor
             {
                 EditorUserBuildSettings.buildAppBundle = appBundle;
                 PlayerSettings.Android.useCustomKeystore = customSigning;
+                if (hadHeapPreference) EditorPrefs.SetInt(heapKey, previousHeap); else EditorPrefs.DeleteKey(heapKey);
             }
         }
 
@@ -112,7 +119,7 @@ namespace SysARchitect.Editor
             {
                 // Android does not support Both. Desktop retains its legacy mouse input.
                 inputHandler.intValue = 1; settings.ApplyModifiedPropertiesWithoutUndo();
-                PlayerSettings.bundleVersion = "0.11.2";
+                PlayerSettings.bundleVersion = "0.12.0";
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
                 {

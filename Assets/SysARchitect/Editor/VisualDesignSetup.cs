@@ -12,6 +12,12 @@ namespace SysARchitect.Editor
 {
     public static class VisualDesignSetup
     {
+        [MenuItem("SysARchitect/Visuals/Configure Glass and Lesson Audio")]
+        public static void ConfigureTeachingPresentation()
+        {
+            GlassVisualSetup.Configure();
+            LessonNarrationSetup.Configure();
+        }
         public static void Configure()
         {
             for (int i = 0; i < UnityEngine.SceneManagement.SceneManager.sceneCount; i++)

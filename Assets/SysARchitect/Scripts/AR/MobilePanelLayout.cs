@@ -115,7 +115,11 @@ namespace SysARchitect.AR
             var lessonPicker = guide.transform.Find("Lesson selection").GetComponent<RectTransform>(); lessonPicker.SetParent(root, false);
             Transform step = null;
             foreach (Transform child in guide.transform) if (child.GetComponent<TextMeshProUGUI>() != null) step = child;
-            var stepControls = Group(guide.transform, "Step controls", guide.transform.Find("Previous step"), step, guide.transform.Find("Next step")); stepControls.SetSiblingIndex(2);
+            var stepControls = guide.transform.Find("Replay voice") != null
+                ? Group(guide.transform, "Step controls", guide.transform.Find("Previous step"), step, guide.transform.Find("Next step"),
+                    guide.transform.Find("Replay voice"), guide.transform.Find("Pause voice"), guide.transform.Find("Mute voice"))
+                : Group(guide.transform, "Step controls", guide.transform.Find("Previous step"), step, guide.transform.Find("Next step"));
+            stepControls.SetSiblingIndex(2);
             Group(guide.transform, "Quiz choices", guide.transform.Find("Pre-quiz"), guide.transform.Find("Post-quiz"), Child(guide.transform, "Scores / Progress summary")).SetSiblingIndex(3);
             var lessonContent = ScrollPanel(guide.GetComponent<RectTransform>(), "Mobile lesson scroll");
             PinHeaderAndFooter(guide.transform, lessonContent, lessonHeader, stepControls); Flow(lessonContent);

@@ -17,6 +17,8 @@ namespace SysARchitect.UI
         [SerializeField] private GameObject lessonSelectionPanel;
         [SerializeField] private Button[] lessonChoices;
         [SerializeField] private TextMeshProUGUI title, body, stepLabel;
+        [SerializeField] private LessonNarration narration;
+        [SerializeField] private Button replayVoice, pauseVoice, muteVoice;
         private int step;
         private LessonId stepLesson;
         private bool scrollToStep = true;
@@ -30,26 +32,41 @@ namespace SysARchitect.UI
             lessonSelectionPanel.SetActive(false);
             stepLesson = lessons.Current.Id;
             if (title.GetComponent<LayoutElement>() == null) title.rectTransform.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 44);
-            toggleButton.onClick.AddListener(() => { panel.SetActive(!panel.activeSelf); scrollToStep = true; previousKey = null; });
-            closeButton.onClick.AddListener(() => panel.SetActive(false));
+            toggleButton.onClick.AddListener(() =>
+            {
+                panel.SetActive(!panel.activeSelf); scrollToStep = true; previousKey = null;
+                if (panel.activeSelf && !ShowingLessonSelection) PlayInstruction(); else narration?.Stop();
+            });
+            closeButton.onClick.AddListener(() => { panel.SetActive(false); narration?.Stop(); });
             previousLesson.onClick.AddListener(() => ChangeLesson(-1));
             nextLesson.onClick.AddListener(() => ChangeLesson(1));
-            lessonListButton.onClick.AddListener(() => { lessonSelectionPanel.SetActive(true); previousKey = null; });
+            lessonListButton.onClick.AddListener(() => { lessonSelectionPanel.SetActive(true); previousKey = null; narration?.Stop(); });
             for (int i = 0; i < lessonChoices.Length; i++)
             {
                 var id = LessonCatalog.All[i].Id;
                 lessonChoices[i].onClick.AddListener(() => ShowLesson(id));
             }
-            loadExample.onClick.AddListener(() => { lessons.LoadExample(); panel.SetActive(false); step = 0; });
+            loadExample.onClick.AddListener(() => { lessons.LoadExample(); panel.SetActive(false); step = 0; narration?.Stop(); });
             checkChallenge.onClick.AddListener(() => lessons.CheckChallenge());
             previousStep.onClick.AddListener(() => ChangeStep(-1));
             nextStep.onClick.AddListener(() => ChangeStep(1));
+            if (narration != null)
+            {
+                replayVoice.onClick.AddListener(narration.Replay);
+                pauseVoice.onClick.AddListener(narration.TogglePause);
+                muteVoice.onClick.AddListener(narration.ToggleMute);
+                foreach (var button in panel.GetComponentsInChildren<Button>(true))
+                    if (button.name == "Pre-quiz" || button.name == "Post-quiz" || button.name == "Scores / Progress summary")
+                        button.onClick.AddListener(narration.Stop);
+            }
         }
+        private void PlayInstruction() => narration?.Play(lessons.Current.Id, step);
         private void ChangeStep(int direction)
         {
             int target = Mathf.Clamp(step + direction, 0, lessons.Current.Steps.Count - 1);
             if (target == step) return;
             step = target; scrollToStep = true;
+            PlayInstruction();
         }
         private int CurrentLessonIndex()
         {
@@ -66,14 +83,22 @@ namespace SysARchitect.UI
         {
             if (lessons.Current.Id != id) lessons.SelectLesson(id);
             step = 0; stepLesson = id; scrollToStep = true; lessonSelectionPanel.SetActive(false); previousKey = null;
+            PlayInstruction();
         }
-        private void OnDisable() { if (lessons != null) lessons.SetInstructionFocus(-1); }
+        private void OnDisable() { if (lessons != null) lessons.SetInstructionFocus(-1); narration?.Stop(); }
         private void Update()
         {
             loadExample.interactable = workspace == null || workspace.CanInteract;
-            if (stepLesson != lessons.Current.Id) { step = 0; stepLesson = lessons.Current.Id; scrollToStep = true; }
+            if (stepLesson != lessons.Current.Id)
+            { step = 0; stepLesson = lessons.Current.Id; scrollToStep = true; if (panel.activeSelf && !ShowingLessonSelection) PlayInstruction(); }
+            if (narration != null)
+            {
+                pauseVoice.GetComponentInChildren<TextMeshProUGUI>().text = narration.Paused ? "Resume voice" : narration.IsPlaying ? "Pause voice" : "Play voice";
+                muteVoice.GetComponentInChildren<TextMeshProUGUI>().text = narration.Muted ? "Enable voice" : "Mute voice";
+                pauseVoice.interactable = replayVoice.interactable = !narration.Muted && narration.CurrentClip != null;
+            }
             lessons.SetInstructionFocus(panel.activeSelf && !ShowingLessonSelection ? step : -1);
-            if (!panel.activeSelf) return;
+            if (!panel.activeSelf) { narration?.Stop(); return; }
             var lesson = lessons.Current;
             bool choosing = ShowingLessonSelection; int index = CurrentLessonIndex();
             previousLesson.interactable = !choosing && index > 0;

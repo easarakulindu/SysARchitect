@@ -1,6 +1,18 @@
-# SysARchitect takeover — October 30, 2026
+# SysARchitect takeover — November 28, 2026
 
-Target demonstration: November 2, 2026. No remote pushes are authorized.
+Original demonstration target: November 2, 2026. No remote pushes are authorized.
+
+**Current teaching presentation (November 28):** automatic anchoring now uses stable
+visible horizontal planes, fits compact surfaces, hides the black AR platform and
+shows translucent white detected planes plus a white editing boundary. Infrastructure
+uses polished glass and beveled hardware bodies. All five lessons have 20 bundled
+English recordings with pinned replay/pause/mute controls; navigation, progress,
+quiz scores and simulation remain separate. Current source passed **102 Edit Mode /
+57 Play Mode tests**, including the real XR Simulation sequence and four phone layouts.
+See [behavior, evidence and limitations](ARSurfaceAndNarration.md) and
+[voice provenance/regeneration](LessonNarrationVoice.md). Android 0.12.0 is configured;
+the new build is pending. Physical Android AR/audio acceptance remains unverified.
+Unrelated untracked voice models and `dotnet-tools.json` remain untouched.
 
 **XR lifecycle stabilization (November 1):** confirmed and repaired removal of an
 anchor before its provider addition was acknowledged. Cancellation/mode switching
