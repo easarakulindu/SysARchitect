@@ -37,6 +37,9 @@ namespace SysARchitect.Tests
         {
             float deadline = Time.realtimeSinceStartup + 10;
             var workspace = Object.FindAnyObjectByType<ARWorkspace>();
+            // The legacy lifecycle cases deliberately request/cancel placement in the same frame.
+            // Automatic placement has its own real-provider regression below.
+            workspace.AutomaticPlacement = false;
             while ((workspace.Mode == ARWorkspace.WorkspaceMode.Checking || ARSession.state != ARSessionState.SessionTracking) && Time.realtimeSinceStartup < deadline) yield return null;
             Assert.That(XRGeneralSettings.Instance.Manager.activeLoader, Is.InstanceOf<SimulationLoader>());
             Assert.That(workspace.Mode, Is.EqualTo(ARWorkspace.WorkspaceMode.AugmentedReality));
@@ -84,6 +87,42 @@ namespace SysARchitect.Tests
             var graph = Object.FindAnyObjectByType<ArchitectureGraph>();
             Assert.That(graph.transform.parent.GetComponent<ARAnchor>(), Is.Not.Null);
             onPlaced?.Invoke();
+        }
+        [UnityTest]
+        public IEnumerator AutomaticPlacementAndRepositionUseWhitePlanesWithoutATap()
+        {
+            yield return SceneManager.LoadSceneAsync("Assets/SysARchitect/Scenes/ARWorkspace.unity");
+            yield return Scan();
+            var workspace = Object.FindAnyObjectByType<ARWorkspace>();
+            var planes = Object.FindAnyObjectByType<ARPlaneManager>();
+            var pose = Object.FindAnyObjectByType<SimulationCameraPoseProvider>();
+            var graph = Object.FindAnyObjectByType<ArchitectureGraph>(FindObjectsInactive.Include);
+            var surface = graph.transform.Find("Anchored Workspace Surface");
+            Assert.That(surface.GetComponent<Renderer>().enabled, Is.False);
+            Assert.That(surface.GetComponent<Collider>().enabled, Is.True, "Editing bounds remain available");
+            for (int cycle = 0; cycle < 2; cycle++)
+            {
+                workspace.AutomaticPlacement = true;
+                float deadline = Time.realtimeSinceStartup + 20;
+                while (!workspace.HasWorkspace && Time.realtimeSinceStartup < deadline)
+                {
+                    var plane = Up(planes);
+                    if (plane != null) pose.transform.rotation = Quaternion.LookRotation(plane.center - pose.transform.position);
+                    yield return null;
+                }
+                Assert.That(workspace.HasWorkspace && workspace.CanInteract, Is.True, "Automatic anchor requires no pointer event");
+                Assert.That(graph.transform.parent.GetComponent<ARAnchor>().pending, Is.False);
+                Assert.That(planes.enabled, Is.True);
+                var overlay = Up(planes).GetComponent<Renderer>();
+                Assert.That(overlay.enabled, Is.True);
+                var color = overlay.sharedMaterial.GetColor("_BaseColor");
+                Assert.That(color.r, Is.EqualTo(1)); Assert.That(color.a, Is.InRange(.1f, .4f));
+                workspace.AutomaticPlacement = false;
+                workspace.Reposition();
+                yield return null;
+            }
+            workspace.ToggleWorkspaceMode(); yield return null;
+            Assert.That(surface.GetComponent<Renderer>().enabled, Is.True, "Virtual Workspace retains its own visible tabletop");
         }
         [UnityTest]
         public IEnumerator ImmediateRepositionRemovesConfirmedAnchorsAndCanRepeat()

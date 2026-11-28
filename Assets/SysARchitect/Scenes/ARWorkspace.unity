@@ -4371,6 +4371,9 @@ MonoBehaviour:
   - {fileID: 1260786933}
   - {fileID: 1260786932}
   - {fileID: 1260786931}
+  workspaceSurface: {fileID: 1107446452}
+  automaticPlacement: 1
+  surfaceStabilitySeconds: 0.8
 --- !u!114 &242753318
 MonoBehaviour:
   m_ObjectHideFlags: 0

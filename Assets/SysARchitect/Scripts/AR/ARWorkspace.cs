@@ -21,7 +21,13 @@ namespace SysARchitect.AR
         [SerializeField] private Camera workspaceCamera;
         [SerializeField] private ARSession session;
         [SerializeField] private Behaviour[] arOnlyComponents;
+        [SerializeField] private Renderer workspaceSurface;
+        [SerializeField] private bool automaticPlacement = true;
+        [SerializeField, Min(0)] private float surfaceStabilitySeconds = .8f;
         private readonly List<ARRaycastHit> hits = new List<ARRaycastHit>();
+        private ARPlane candidatePlane;
+        private Vector3 candidateCenter;
+        private float candidateSince;
         private ARAnchor anchor;
         private bool placing;
         private int placementRevision;
@@ -31,6 +37,7 @@ namespace SysARchitect.AR
         private int arCullingMask;
         public enum WorkspaceMode { Checking, AugmentedReality, Virtual }
         public WorkspaceMode Mode { get; private set; }
+        public bool AutomaticPlacement { get => automaticPlacement; set { automaticPlacement = value; candidatePlane = null; } }
         public bool HasWorkspace => Mode == WorkspaceMode.Virtual || anchor != null;
         public bool CanInteract => Mode == WorkspaceMode.Virtual || (anchor != null && TrackingAllowsInput(ARSession.state == ARSessionState.SessionTracking, anchor.trackingState == TrackingState.Tracking));
         public static bool TrackingAllowsInput(bool sessionTracking, bool anchorTracking) => sessionTracking && anchorTracking;
@@ -38,6 +45,7 @@ namespace SysARchitect.AR
         private void Start()
         {
             graph.gameObject.SetActive(false);
+            if (workspaceSurface != null) workspaceSurface.enabled = false;
             arCullingMask = workspaceCamera.cullingMask;
             Application.targetFrameRate = 60;
 #if ENABLE_LEGACY_INPUT_MANAGER
@@ -67,7 +75,9 @@ namespace SysARchitect.AR
                 workspaceCamera.transform.localPosition = Vector3.zero;
                 workspaceCamera.transform.localRotation = Quaternion.identity;
                 workspaceCamera.cullingMask = arCullingMask;
+                if (workspaceSurface != null) workspaceSurface.enabled = false;
                 SetARActive(true);
+                foreach (var plane in planes.trackables) plane.gameObject.SetActive(true);
             }
             else EnterVirtualWorkspace(state == ARSessionState.NeedsInstall
                 ? "AR services need installation (Virtual / AR to install)."
@@ -92,7 +102,7 @@ namespace SysARchitect.AR
         }
         private void EnterVirtualWorkspace(string reason)
         {
-            simulation.Pause(); placing = false; placementRevision++;
+            simulation.Pause(); placing = false; placementRevision++; candidatePlane = null;
             graph.transform.SetParent(null, true);
             if (anchor != null) ReleaseAnchor(anchor);
             anchor = null;
@@ -102,6 +112,7 @@ namespace SysARchitect.AR
             graph.transform.SetPositionAndRotation(Vector3.zero, Quaternion.identity);
             graph.transform.localScale = Vector3.one * .35f;
             graph.gameObject.SetActive(true);
+            if (workspaceSurface != null) workspaceSurface.enabled = true;
             ResetVirtualView();
         }
         private void ResetVirtualView()
@@ -116,27 +127,65 @@ namespace SysARchitect.AR
         private void Update()
         {
             if (!CanInteract) simulation.Pause();
+            if (automaticPlacement) TryAutomaticPlacement();
             status.text = Mode == WorkspaceMode.Virtual ? $"Virtual Workspace (non-AR). {message} Toolbox: build; tap/drag nodes; Connect: tap two nodes."
                 : Mode == WorkspaceMode.Checking ? "Checking AR availability… Virtual / AR opens the non-AR workspace now."
                 : ARSession.state != ARSessionState.SessionTracking ? $"AR: {ARSession.state}. Move slowly and scan a well-lit textured surface. {ARSession.notTrackingReason}"
                 : placing ? "Creating surface anchor…"
-                : !HasWorkspace ? message ?? "Scan a horizontal surface. Tap a detected plane to anchor the workspace."
+                : !HasWorkspace ? message ?? "Scan a horizontal surface. Hold the camera toward a white detected plane; the workspace anchors automatically."
                 : !CanInteract ? "Workspace tracking lost. Move back toward the surface; editing and simulation are paused."
                 : "Workspace tracked. Toolbox: choose a component, then tap the workspace. Select: tap nodes/lines; drag nodes. Connect: tap two nodes.";
         }
-        public async void TryPlaceWorkspace(Vector2 screenPosition)
+        public void TryPlaceWorkspace(Vector2 screenPosition)
         {
             if (Mode != WorkspaceMode.AugmentedReality || placing || HasWorkspace || ARSession.state != ARSessionState.SessionTracking) return;
             if (!raycasts.Raycast(screenPosition, hits, TrackableType.PlaneWithinPolygon))
             { message = "No detected plane at that point. Scan a horizontal surface and tap its highlighted area."; return; }
             var plane = planes.GetPlane(hits[0].trackableId);
             if (plane == null || plane.alignment != PlaneAlignment.HorizontalUp) return;
+            BeginAnchor(hits[0].pose);
+        }
+        private void TryAutomaticPlacement()
+        {
+            if (Mode != WorkspaceMode.AugmentedReality || HasWorkspace || placing || anchorOperations > 0 ||
+                ARSession.state != ARSessionState.SessionTracking) { candidatePlane = null; return; }
+            // Use the real polygon under the camera's aim, rather than anchoring an off-screen floor.
+            var aim = workspaceCamera.ViewportToScreenPoint(new Vector3(.5f, .5f));
+            ARPlane target = null;
+            if (raycasts.Raycast(aim, hits, TrackableType.PlaneWithinPolygon))
+            {
+                var plane = planes.GetPlane(hits[0].trackableId);
+                // The shared editing bounds are 2.4 model units at 0.35 metres per unit.
+                if (plane != null && plane.isActiveAndEnabled && plane.subsumedBy == null &&
+                    plane.alignment == PlaneAlignment.HorizontalUp && plane.trackingState == TrackingState.Tracking &&
+                    plane.size.x >= .84f && plane.size.y >= .84f) target = plane;
+            }
+            if (target == null)
+            {
+                candidatePlane = null;
+                message = "Scan a horizontal surface at least 84 cm wide. Aim at its white overlay for automatic placement.";
+                return;
+            }
+            if (candidatePlane != target || Vector3.Distance(candidateCenter, target.center) > .05f)
+            {
+                candidatePlane = target; candidateCenter = target.center; candidateSince = Time.unscaledTime;
+                message = "Surface detected. Hold the camera steady while the workspace anchors automatically.";
+                return;
+            }
+            if (Time.unscaledTime - candidateSince >= surfaceStabilitySeconds)
+            {
+                candidatePlane = null;
+                BeginAnchor(new Pose(target.center, target.transform.rotation));
+            }
+        }
+        private async void BeginAnchor(Pose pose)
+        {
             placing = true;
             int revision = placementRevision;
             anchorOperations++;
             try
             {
-                var result = await anchors.TryAddAnchorAsync(hits[0].pose);
+                var result = await anchors.TryAddAnchorAsync(pose);
                 if (this == null) return;
                 if (!result.status.IsSuccess()) { message = "The device could not anchor that surface. Scan again and retry."; return; }
                 // Async creation can finish before GetChanges announces the anchor. Removing a
@@ -152,8 +201,7 @@ namespace SysARchitect.AR
                 graph.transform.localRotation = Quaternion.identity;
                 graph.transform.localScale = Vector3.one * .35f;
                 graph.gameObject.SetActive(true);
-                planes.enabled = false;
-                foreach (var trackedPlane in planes.trackables) trackedPlane.gameObject.SetActive(false);
+                // Keep detected white surfaces visible; the AR workspace uses their overlay.
             }
             catch (System.Exception exception) { message = "Anchor creation failed: " + exception.Message; Debug.LogWarning(message); }
             finally
@@ -194,14 +242,14 @@ namespace SysARchitect.AR
             simulation.Pause();
             if (Mode == WorkspaceMode.Virtual) { ResetVirtualView(); return; }
             if (Mode != WorkspaceMode.AugmentedReality) return;
-            placementRevision++; placing = false;
+            placementRevision++; placing = false; candidatePlane = null;
             graph.transform.SetParent(null, true);
             graph.gameObject.SetActive(false);
             if (anchor != null) ReleaseAnchor(anchor);
             anchor = null;
             planes.enabled = true;
             foreach (var trackedPlane in planes.trackables) trackedPlane.gameObject.SetActive(true);
-            message = "Tap another detected horizontal surface. Your nodes and connections are retained.";
+            message = "Aim at a white horizontal surface to re-anchor automatically. Your nodes and connections are retained.";
         }
     }
 }
