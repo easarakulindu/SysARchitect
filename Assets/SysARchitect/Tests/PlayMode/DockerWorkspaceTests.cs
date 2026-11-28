@@ -30,7 +30,9 @@ namespace SysARchitect.Tests
             Assert.That(docker.GetHost(host).Containers.Count, Is.EqualTo(2));
             Assert.That(host.GetComponent<WorkloadEnclosure>().Expanded, Is.True);
             var glass = host.transform.Find("Transparent workload shell").GetComponent<MeshRenderer>();
-            Assert.That(glass.sharedMaterial.IsKeywordEnabled("_SURFACE_TYPE_TRANSPARENT"), Is.True);
+            Assert.That(glass.sharedMaterial.shader.name, Is.EqualTo("SysARchitect/HolographicHardware"));
+            Assert.That(glass.sharedMaterial.GetTag("RenderType", false), Is.EqualTo("Transparent"));
+            Assert.That(glass.sharedMaterial.GetFloat("_ZWrite"), Is.Zero);
             Assert.That(glass.sharedMaterial.GetColor("_BaseColor").a, Is.LessThan(.1f));
             Assert.That(glass.gameObject.layer, Is.EqualTo(2), "The shell must not intercept node/edge picking.");
             // The enclosure's base collider must not hide the actual container hit targets.
